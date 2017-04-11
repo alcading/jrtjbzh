@@ -1,0 +1,1020 @@
+package east.dao;
+
+import java.math.BigDecimal;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.log4j.Logger;
+
+import com.huateng.ebank.framework.util.DataFormat;
+import com.huateng.ebank.framework.util.DateUtil;
+
+import east.utils.tools.DBUtil;
+
+/**
+ * 生成金标数据DAO
+ * @author Alca Ding
+ */
+public class JBDao {
+	
+	private static final Logger logger = Logger.getLogger(JBDao.class);
+	private String zftxdk = "018,041"; // 政府贴息贷款
+	private String bankReport_bankCode = ""; //总行金标报送金融金钩代码
+	private Map clrClass = null;
+	private Map lntypeMap = null;
+	
+	public JBDao(){
+		getHeadBranchNo();
+		clrClass = getDataDicMap(500);// 五级分类
+		lntypeMap = getDataDicMap(501);
+	}
+	
+	public void getHeadBranchNo(){
+
+		Connection conn = DBUtil.getConnection();
+		Statement stmt = null;
+		ResultSet rs = null;
+		try {
+			stmt = conn.createStatement();
+			StringBuffer query = new StringBuffer();
+			query.append("select jbcode from BRNO_JBCD_LINK where brlevel = '1' ");
+			
+			rs = stmt.executeQuery(query.toString());
+			while(rs.next()){
+				bankReport_bankCode = rs.getString("jbcode");
+			}
+		} catch (SQLException e) {
+			logger.info("获取总行金融机构编码出错:"+ e.getMessage());
+		} finally{
+			DBUtil.close(conn, stmt, rs);
+		}
+	}
+	
+	public void insertDepositBalance(String monthEndDate) throws Exception{
+
+		Connection conn = DBUtil.getConnection();
+		Statement stmt = conn.createStatement();
+		logger.info("....................处理存款余额信息begin.......................");
+		try {
+			
+			StringBuffer query = new StringBuffer();
+			query.append("insert into DEPB( ");
+			//活期对公
+			query.append("select to_date('"+ monthEndDate+"','yyyy-mm-dd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,'0',hq.zhdh,hq.zhdh, ");
+			query.append("case when lb.ckcplb is not null then lb.ckcplb else 'D01' end ,null,null,'CNY', ");
+			query.append("hq.zhye,'RF02', case when hq.fdll >0 then hq.fdll else llb.ll end ");		
+			query.append("from hqdgzwj hq ");		
+			query.append("left join brno_jbcd_link li on hq.dqdh||jgdh = li.brno ");
+			query.append("left join ckcplb lb on hq.kmdh = lb.kmdh ");
+			query.append("left join f_temp_llb llb on hq.lldh = llb.lldh ");
+			query.append("where hq.jlzt not in ('0','2') and hq.xdcked = 0 and hq.zhye > 0 ");
+			query.append("union all ");
+			//--对公协定存款
+			query.append("select to_date('"+ monthEndDate+"','yyyy-mm-dd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,'0',hq.zhdh,hq.zhdh,'D051', ");		
+			query.append("null,null,'CNY',hq.zhye,'RF02', case when hq.fdll >0 then hq.fdll else llb.ll end ");
+			query.append("from hqdgzwj hq ");
+			query.append("left join brno_jbcd_link li on hq.dqdh||jgdh = li.brno ");
+			query.append("left join ckcplb lb on hq.kmdh = lb.kmdh ");
+			query.append("left join f_temp_llb llb on hq.lldh = llb.lldh ");
+			query.append("where hq.jlzt not in ('0','2') ");
+			query.append("and hq.xdcked > 0 and hq.zhye > 0 and hq.xdcked >= hq.zhye ");
+			query.append("union all ");
+			query.append("select to_date('"+ monthEndDate+"','yyyy-mm-dd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,'0',hq.zhdh,hq.zhdh,'D051', ");
+			query.append("null,null,'CNY',hq.xdcked,'RF02', case when hq.fdll >0 then hq.fdll else llb.ll end ");
+			query.append("from hqdgzwj hq ");
+			query.append("left join brno_jbcd_link li on hq.dqdh||jgdh = li.brno ");
+			query.append("left join ckcplb lb on hq.kmdh = lb.kmdh ");
+			query.append("left join f_temp_llb llb on hq.lldh = llb.lldh ");
+			query.append("where hq.jlzt not in ('0','2') ");
+			query.append("and hq.xdcked > 0 and hq.zhye > 0 and hq.xdcked < hq.zhye ");
+			query.append("union all ");
+			query.append("select to_date('"+ monthEndDate+"','yyyy-mm-dd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,'0',hq.zhdh,hq.zhdh,'D052', ");
+			query.append("null,null,'CNY', hq.zhye - hq.xdcked,'RF02', case when hq.fdll >0 then hq.fdll else llb.ll end ");
+			query.append("from hqdgzwj hq ");
+			query.append("left join brno_jbcd_link li on hq.dqdh||jgdh = li.brno ");
+			query.append("left join ckcplb lb on hq.kmdh = lb.kmdh ");
+			query.append("left join f_temp_llb llb on hq.lldh = llb.lldh ");
+			query.append("where hq.jlzt not in ('0','2') ");
+			query.append("and hq.xdcked > 0 and hq.zhye > 0 and hq.xdcked < hq.zhye ");
+			query.append("union all ");
+			//对私活期
+			query.append("select to_date('"+ monthEndDate+"','yyyy-mm-dd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,'1',hq.zhdh,hq.zhdh,case when lb.ckcplb is not null then lb.ckcplb else 'D01' end, ");
+			query.append("null,null,'CNY',hq.zhye,'RF02', case when hq.fdll >0 then hq.fdll else llb.ll end ");
+			query.append("from dshqzwj hq ");
+			query.append("left join brno_jbcd_link li on hq.dqdh||jgdh = li.brno ");
+			query.append("left join ckcplb lb on hq.kmdh = lb.kmdh ");
+			query.append("left join f_temp_llb llb on hq.lldh = llb.lldh ");
+			query.append("where hq.jlzt not in ('0','2') and hq.zhye > 0 ");
+			query.append("union all ");
+			//定期
+			query.append("select to_date('"+ monthEndDate+"','yyyy-mm-dd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,case when dq.ywdh='002' then '0' else '1' end, ");
+			query.append("dq.zhdh,dq.zhdh,case when lb.ckcplb is not null then lb.ckcplb else 'D01' end, ");
+			query.append("to_date(dq.qxrq,'yyyymmdd'), case when dq.dqrq > dq.qxrq then to_date(dq.dqrq,'yyyymmdd') else null end,'CNY',dq.zhye, ");
+			query.append("case when dq.fdll >0 then 'RF02' else 'RF01' end, case when dq.fdll >0 then dq.fdll when dq.kmdh='211130' then null else llb.ll end ");
+			query.append("from dqzwj dq ");
+			query.append("left join brno_jbcd_link li on dq.dqdh||dq.jgdh = li.brno ");
+			query.append("left join ckcplb lb on dq.kmdh = lb.kmdh ");
+			query.append("left join f_temp_llb llb on dq.lldh = llb.lldh ");
+			query.append("where dq.jlzt not in ('0','2') and dq.zhye > 0 ) ");
+					    
+			stmt.execute(query.toString());
+			conn.commit();
+		} catch (SQLException e) {
+			conn.rollback();
+			throw new Exception("处理存款余额信息出错:" + e.getMessage(), e);
+		} finally{
+			DBUtil.close(conn, stmt, null);
+		}
+		logger.info("....................处理存款余额信息begin.......................");
+		
+	}
+	
+	public void insertPLoanBalance(String monthEndDate) throws Exception{
+
+		Connection conn = DBUtil.getConnection();
+		Statement stmt = null;
+		ResultSet rs = null;
+		logger.info("....................处理个人贷款余额信息(loan_bal_message)begin.......................");
+		stmt = conn.createStatement();
+		StringBuffer dbSql = new StringBuffer();
+		dbSql.append("select  clb.lnco,cui.idno,clb.brcd,clb.lncino,clb.lnid,cli.isdate,clb.duedt,clc.tedate,clb.curcd ,clb.lnbal,clb.irchgmod,clb.usdintrate,cli.guatcode,clb.lnstat,cli.clr_class,clc.ext_cnt,cli.lntype,cli.cocontractno  ");
+		dbSql.append("from  loaninfo cli,tla_lncino_base clb,loancino clc,  customer_info cui   ");
+		dbSql.append("where ");
+		dbSql.append(" clb.lnco = cli.contractno and clb.lncino=clc.cino and clb.custno=cui.custcd and clb.lnstat not in ('V') and clb.clrflg<>'1' and clb.lnbal>0 and clb.lnid not in ('101101','150101') ");
+		//and clb.brcd in ('90801','90802')
+		//and clb.acbrcd in ('90801','90802')
+
+		dbSql.append("order by clb.lnco ");
+
+		String assureInfo = "select seqno from assureinfo where contractno= ? ";
+
+		String mortagageinfo = "select mort_type from mortagage  where contractno= ? ";
+
+		String termchange = "select apptype,status  from term_chg_apply where contractno= ? ";
+
+		String bankCodeInfo = "select jbcode from BRNO_JBCD_LINK where brno = ? ";
+
+		String intrateInfo = "select first 1 intrate  from intrate where intratecd='540'  and  term='199' and effect_date<= ?  order by effect_date  desc  ";
+
+		String sxMessage = "select lldh, qsrq,llfdfs,fdll  from zzdkmxb mx   where substr(mx.dkzh,0,5) ||''|| substr(mx.dkzh,11,6)||''||mx.xh = ?   ";
+		
+		String insertData = "insert into LOAB values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ";
+		
+		// ----------------------PreparedStatement 余额取值 BEGIN----------
+		PreparedStatement ps_assureinfo = conn.prepareStatement(assureInfo);
+		PreparedStatement ps_mortagageinfo = conn
+				.prepareStatement(mortagageinfo);
+		PreparedStatement ps_termchange = conn.prepareStatement(termchange);
+		PreparedStatement ps_bankCodeInfo = conn.prepareStatement(bankCodeInfo);
+		PreparedStatement ps_intrateInfo = conn.prepareStatement(intrateInfo);
+		PreparedStatement ps_sxMessage = conn.prepareStatement(sxMessage);
+		PreparedStatement ps_insertData = conn.prepareStatement(insertData);
+
+		// ----------------------PreparedStatement 信息取值 END----------
+
+		// ----------------------ResultSet 信息取值 BEGIN----------
+
+		ResultSet rs_termchange = null;
+		ResultSet rs_bankCodeInfo= null;
+		ResultSet rs_assureinfo = null;
+		ResultSet rs_mortagageinfo = null;
+		ResultSet rs_intrateInfo = null;
+		ResultSet rs_sxMessage = null;
+
+		// ----------------------ResultSet 余额取值 END----------
+		String globalCino = "";
+		try {
+			String MonthLastDay =  monthEndDate;
+			System.out.println("[" + dbSql.toString() + "]");
+			Date tsp1 = new Date();
+			rs = stmt.executeQuery(dbSql.toString());
+			Date tsp2 = new Date();
+			System.out.println("sql run time1:"
+					+ (tsp2.getTime() - tsp1.getTime()));
+
+			while (rs.next()) {
+
+				String contractno = "";
+				String brno = ""; // 金融机构编码
+				String cust_type = "1"; // 客户类型
+				String lncino = ""; // 借款人代码
+				String cino = ""; // cocontractno
+				String indus_type = "1"; // 贷款主体行业类别 1
+				String reg_place = ""; // 注册地 无需填写
+				String invest_element = ""; // 投资经济成分 无需填写
+				String compa_scale = ""; // 企业规模 无需填写
+				String lnid = ""; // 产品类别
+				String industry = "100"; // 贷款实际投向
+				String isdate = ""; // 贷款发放日期
+				String tedate = ""; // 贷款到期日期
+				String extdate = ""; // 展期到期日期
+				String curcd = ""; // 币种
+				double lnbal = 0.0; // 贷款余额
+				String irchgmod = ""; // 利率是否固定 irchgmod
+				double intrate = 0.0; // 利率水平 usdintrate
+				String guattype = ""; // 担保方式
+				String lnstat = ""; // 贷款状态 正常、展期、逾期。
+				String clr_class = ""; // 贷款质量 （WJFLZT）
+				String last_upd_date = MonthLastDay; // 数据日期
+				String lntype = "";
+				boolean ext_flag = false; // 是否展期
+				String cocontractno = "";
+				contractno = rs.getString("lnco").trim();
+				lncino = rs.getString("idno").trim().trim();
+				cino = rs.getString("lncino").trim();
+				globalCino=cino;
+				cocontractno = rs.getString("cocontractno").trim();
+				lntype = rs.getString("lntype").trim();
+//				Date startdt = rs.getDate("isdate");
+//				isdate = DateUtil.dateToString(startdt); // 贷款发放日期
+				isdate = rs.getString("isdate");
+//				Date endt = rs.getDate("duedt");
+//				tedate = DateUtil.dateToString(endt); // 贷款到期日期
+				tedate = rs.getString("duedt");
+				clr_class = rs.getString("clr_class");
+				String brcode=rs.getString("brcd");//机构号
+				ps_bankCodeInfo.setString(1,brcode );
+				rs_bankCodeInfo = ps_bankCodeInfo.executeQuery();
+				if (rs_bankCodeInfo.next())
+					brno=rs_bankCodeInfo.getString("jbcode");
+				ps_termchange.setString(1, contractno);
+				rs_termchange = ps_termchange.executeQuery();
+				while (rs_termchange.next()) {
+					if (("1".equals(rs_termchange.getString("status")))
+							&& ("44".equals(rs_termchange.getString("apptype")))) {
+						ext_flag = true;
+						break;
+					}
+				}
+				if (ext_flag) {
+//					Date exttdt = rs.getDate("tedate");
+//					extdate = DateUtil.dateToString(exttdt); // 展期到期日
+					extdate = rs.getString("tedate");
+				}
+				curcd = rs.getString("curcd");
+				lnbal = rs.getDouble("lnbal");
+				irchgmod = rs.getString("irchgmod");
+				if ("0".equals(irchgmod.trim())) {
+					irchgmod = "RF01"; // 固定利率方式
+				} else {
+					irchgmod = "RF02";
+				}
+
+				if (contractno.substring(0, 2).equals("gd")||!"666".equals(lntype)) {
+					intrate = rs.getDouble("usdintrate");
+				} else {                     //邯郸授信卡类业务
+					ps_sxMessage.setString(1, cino);
+					rs_sxMessage = ps_sxMessage.executeQuery();
+					if (rs_sxMessage.next()) {
+//						String lldh = "";
+//						String llfdfs = "";
+						Double fdll = 0.0;
+//						lldh = rs_sxMessage.getString("lldh");
+//						Date qsrq = rs_sxMessage.getDate("qsrq");// 贷款起始日期
+						Date qsrq = DataFormat.ConvertDate1(rs_sxMessage.getString("qsrq"));
+//						llfdfs = rs_sxMessage.getString("llfdfs");
+						fdll = rs_sxMessage.getDouble("fdll");
+						ps_intrateInfo.setDate(1, (java.sql.Date) qsrq);
+						rs_intrateInfo = ps_intrateInfo.executeQuery();
+						if (rs_intrateInfo.next()) {
+							if (fdll > 0) {
+								intrate = rs_intrateInfo.getDouble("intrate");
+								intrate = intrate * (1 + fdll/100);
+							} else {
+								intrate = rs_intrateInfo.getDouble("intrate");
+							}
+						}
+					} else {
+						;
+					}
+
+				}
+
+				guattype = rs.getString("guatcode");
+				/*
+				 * A 质押贷款 B 抵押贷款 B01 房地产抵押贷款 B99 其他抵押贷款 C 保证贷款 C01 联保贷款 C99
+				 * 其他保证贷款 D 信用/免担保贷款 E 组合担保 Z 其他
+				 */
+				switch (guattype.charAt(0)) {
+				case '1': {
+					guattype = "A";
+				}
+					break;
+				case '2': {
+					ps_mortagageinfo.setString(1, cocontractno);
+					rs_mortagageinfo = ps_mortagageinfo.executeQuery();
+					if (rs_mortagageinfo.next()) {
+						if ("1".equals(rs_mortagageinfo.getString("mort_type")
+								.trim())) {
+							guattype = "B01"; // 房地产抵押贷款
+						} else {
+							guattype = "B99"; // 其它抵押贷款
+						}
+					} else {
+						guattype = "B";
+					}
+				}
+					break;
+				case '3': {
+					ps_assureinfo.setString(1, cocontractno);
+					rs_assureinfo = ps_assureinfo.executeQuery();
+					if (rs_assureinfo.next()) {
+						if (rs_assureinfo.getInt("seqno") > 1) {
+							guattype = "C01"; // 联保贷款
+						} else {
+							guattype = "C99";
+						}
+
+					} else {
+						guattype = "C";
+					}
+				}
+					break;
+				case '4': {
+					guattype = "D";
+				}
+					break;
+				case '5':
+				case '6': {
+					guattype = "E";
+				}
+					break;
+				default: {
+					guattype = "Z";
+				}
+					break;
+				}
+
+				lnstat = rs.getString("lnstat");
+
+				if (zftxdk.indexOf(lntype) != -1 // 贷款类型 区分下岗失业贷款
+						&& DataFormat.ConvertDate(MonthLastDay).before(DataFormat.ConvertDate1(rs.getString("duedt"))
+								)) {// 政府贴息贷款，而且没有到期的
+					lnstat = "0";
+					clr_class = "0";
+				}
+
+				if ("0".equals(lnstat.trim())) {
+					lnstat = "FS01"; // 正常
+				} else if ("1".equals(lnstat.trim())
+						|| "2".equals(lnstat.trim())) {
+					lnstat = "FS03";
+				} else if ("E".equals(lnstat.trim())) {
+					lnstat = "FS04";
+				}
+				if (ext_flag) {//展期
+					lnstat = "FS02";
+				}
+
+				if (!DataFormat.isEmpty(contractno)) {
+					// 业务种类细分
+					lnid = getTypedetail(lntype);  //与征信接口统一的贷款
+					if (DataFormat.isEmpty(lnid)) {
+						lnid = "99";
+					}
+					if(lntype.equalsIgnoreCase("018")||lntype.equalsIgnoreCase("035")){
+						lnid="41";                 //与征信接口不统一的两种贷款
+					}
+					lnid = String.valueOf(lntypeMap.get(lnid.trim()));// 501
+					//add by weigang.lv 为空的默认给消费类型
+					if(DataFormat.isEmpty(lnid)){
+						lnid="F0219";
+					}
+					
+					ps_insertData.setDate(1, (java.sql.Date) DataFormat.ConvertDate(last_upd_date));
+					ps_insertData.setString(2, brno == null
+							|| brno.trim().length() < 1 ? bankReport_bankCode
+							: brno.trim());
+					ps_insertData.setString(3, cust_type);
+					ps_insertData.setString(4, lncino);
+					ps_insertData.setString(5, indus_type);
+					ps_insertData.setString(6, reg_place);
+					ps_insertData.setString(7, invest_element);
+					ps_insertData.setString(8, compa_scale);
+					ps_insertData.setString(9, cino);
+					ps_insertData.setString(10,lnid);
+					ps_insertData.setString(11,industry);
+					ps_insertData.setDate(12,(java.sql.Date) DataFormat.ConvertDate1(isdate));
+					ps_insertData.setDate(13,(java.sql.Date) DataFormat.ConvertDate1(tedate));
+					if ("".equals(extdate)) {
+						ps_insertData.setDate(14, null); // 展期日期
+					} else {
+						ps_insertData.setDate(14,(java.sql.Date) DataFormat.ConvertDate1(extdate));// 展期日期
+					}
+					ps_insertData.setString(15,curcd);
+					ps_insertData.setBigDecimal(16, new BigDecimal(lnbal).setScale(2,BigDecimal.ROUND_HALF_UP));
+					ps_insertData.setString(17, irchgmod);
+					ps_insertData.setBigDecimal(18, new BigDecimal(intrate).setScale(5,BigDecimal.ROUND_HALF_UP));
+					ps_insertData.setString(19, guattype);
+					ps_insertData.setString(20, String.valueOf(clrClass.get(clr_class.trim())));
+					ps_insertData.setString(21, lnstat);
+					ps_insertData.execute();
+				}
+			}
+			conn.commit();
+		} catch (Exception e) {
+			System.out.println("处理借据失败 : " + globalCino);
+			e.printStackTrace();
+			conn.rollback();
+			throw new Exception("插入个人余额信息出错:" + e.getMessage(), e);
+		} finally {
+			if (rs != null)
+				rs.close();
+			if (stmt != null)
+				stmt.close();
+			if (rs_assureinfo != null)
+				rs_assureinfo.close();
+			if (ps_assureinfo != null)
+				ps_assureinfo.close();
+			if (rs_mortagageinfo != null)
+				rs_mortagageinfo.close();
+			if (ps_mortagageinfo != null)
+				ps_mortagageinfo.close();
+			if (rs_bankCodeInfo != null)
+				rs_bankCodeInfo.close();
+			if (ps_bankCodeInfo != null)
+				ps_bankCodeInfo.close();
+			if (rs_intrateInfo != null)
+				rs_intrateInfo.close();
+			if (ps_intrateInfo != null)
+				ps_intrateInfo.close();
+			if (rs_sxMessage != null)
+				rs_sxMessage.close();
+			if (ps_sxMessage != null)
+				ps_sxMessage.close();
+			if (rs_termchange != null)
+				rs_termchange.close();
+			if (ps_termchange != null)
+				ps_termchange.close();
+			DBUtil.close(conn, null, null);
+		}
+		logger.info("....................处理个人贷款余额信息(loan_bal_message)end.......................");
+	}
+	
+	public void insertPLoanAccrual(String monthStartDate, String monthEndDate) throws Exception{
+
+		Connection conn = DBUtil.getConnection();
+		logger.info("....................处理个人贷款贷款发生额信息(loan_incurr_message)begin.......................");
+		StringBuffer dbSql = new StringBuffer();
+		dbSql.append("select  clb.lnco,cui.idno,clb.brcd,clb.lncino,clb.lnid,cli.isdate,clb.opdt,clb.duedt,clc.tedate,clb.clsdt,clc.trsf_date,clb.curcd ,clb.lnamt,clb.irchgmod,clb.usdintrate,cli.guatcode,clb.lnstat,cli.clr_class,clc.ext_cnt,cli.lntype,cli.cocontractno,clb.clrflg  ");// ,
+		dbSql.append("from  loaninfo cli,tla_lncino_base clb,loancino clc,  customer_info cui   ");
+		dbSql.append("where ");
+		dbSql.append("  clb.lnco = cli.contractno and clb.lncino=clc.cino and clb.custno=cui.custcd  and ( clb.lncino in ( select lncino from custcredit_tla_lnrtnlog ctl  where ctl.rtndt between ? and ?  and  ctl.rtnamt<>0 )  or clb.opdt>= ? ) and clb.lnbal>=0 and clb.lnid not in ('101101','150101')  ");
+		//and clb.acbrcd in ('90801','90802')
+		//and clb.lnstat != 'V' and clb.lnstat != 'C' and clb.clrflg<>'1'
+		dbSql.append("order by clb.lnco ");
+
+		String assureInfo = "select seqno from assureinfo where contractno= ? ";
+
+		String mortagageinfo = "select mort_type from mortagage  where contractno= ? ";
+
+		String termchange = "select apptype,status  from term_chg_apply where contractno= ? ";
+		// 金融机构代码
+		String bankCodeInfo = "select jbcode from BRNO_JBCD_LINK where brno = ? ";
+		// BEGIN----------------------------
+		// // 实际还款金额+rtngmint
+		String sumrtnamt_rtnint = "select  sum(rtnamt) rtnamt from tla_lnrtnlog where (lncino= ? or lncino= ?) and rtndt between ? and ? ";
+
+		String intrateInfo = "select first 1 intrate  from intrate where intratecd='540'  and  term='199' and effect_date<= ?  order by effect_date  desc  ";
+
+		String sxMessage = "select lldh, qsrq,llfdfs,fdll  from zzdkmxb mx   where substr(mx.dkzh,0,5) ||''|| substr(mx.dkzh,11,6)||''||mx.xh = ?   ";
+		
+		String insertData = "insert into LOAF values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ";
+		String insertDataF = "insert into LOAF values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ";
+		// ---------------------------------发生额取值SQL
+		// END----------------------------
+
+		// ----------------------PreparedStatement 发生额取值 BEGIN----------
+		PreparedStatement ps_results = conn.prepareStatement(dbSql.toString());
+		PreparedStatement ps_assureinfo = conn.prepareStatement(assureInfo);
+		PreparedStatement ps_mortagageinfo = conn
+				.prepareStatement(mortagageinfo);
+		PreparedStatement ps_termchange = conn.prepareStatement(termchange);
+		PreparedStatement ps_bankCodeInfo = conn.prepareStatement(bankCodeInfo);
+		PreparedStatement ps_sumrtnamtRtnint = conn
+				.prepareStatement(sumrtnamt_rtnint);
+
+		PreparedStatement ps_intrateInfo = conn.prepareStatement(intrateInfo);
+		PreparedStatement ps_sxMessage = conn.prepareStatement(sxMessage);
+		PreparedStatement ps_insertData = conn.prepareStatement(insertData);
+		PreparedStatement ps_insertDataF = conn.prepareStatement(insertDataF);
+		// ----------------------PreparedStatement 信息取值 END----------
+
+		// ----------------------ResultSet 信息取值 BEGIN----------
+		ResultSet rs = null;
+		ResultSet rs_sumrtnamtRtnint = null;
+		ResultSet rs_assureinfo = null;
+		ResultSet rs_mortagageinfo = null;
+		ResultSet rs_termchange = null;
+		ResultSet rs_bankCodeInfo= null;
+		ResultSet rs_intrateInfo = null;
+		ResultSet rs_sxMessage = null;
+
+		// ----------------------ResultSet 发生额取值 END----------
+		String globalCino = "";
+		try {
+			System.out.println("[" + dbSql.toString() + "]");
+			// 取本月第一天
+			String monFirsint = DateUtil.dateToString(DateUtil
+					.getFirstDate(DataFormat.ConvertDate(monthEndDate)));
+			// 取本月最后一天
+			String monLast = monthEndDate;
+			String MonthLastDay = monthEndDate;
+			Date tsp1 = new Date();
+			ps_results.setDate(1,
+					(java.sql.Date) DataFormat.ConvertDate(monFirsint));
+			ps_results.setDate(2,
+					(java.sql.Date) DataFormat.ConvertDate(monLast));
+			ps_results.setDate(3,
+					(java.sql.Date) DataFormat.ConvertDate(monFirsint));
+			rs = ps_results.executeQuery();
+			Date tsp2 = new Date();
+			System.out.println("sql run time1:"
+					+ (tsp2.getTime() - tsp1.getTime()));
+			while (rs.next()) {
+				String contractno = "";
+				String brno = ""; // 金融机构编码
+				String cust_type = "1"; // 客户类型
+				String lncino = ""; // 借款人代码
+				String cino = "";
+				String indus_type = "1"; // 贷款主体行业类别 1
+				String reg_place = ""; // 注册地 无需填写
+				String invest_element = ""; // 投资经济成分 无需填写
+				String compa_scale = ""; // 企业规模 无需填写
+				String lnid = ""; // 产品类别
+				String industry = "100"; // 贷款实际投向
+				String isdate = ""; // 贷款发放日期
+				String opdt = ""; // 贷款放款日期
+				String tedate = ""; // 贷款到期日期
+				String trsfDate = ""; // 展期到期日期
+				String curcd = ""; // 币种
+				double accountAmount = 0.0; // 发生额
+				double payAmount = 0.0; // 放款金额
+				String irchgmod = ""; // 利率是否固定 irchgmod
+				double intrate = 0.0; // 利率水平 usdintrate
+				String guattype = ""; // 担保方式
+				String lnstat = ""; // 贷款状态 正常、核销、剥离、转让
+				String last_upd_date = MonthLastDay; // 数据日期
+				String lntype = "";
+				boolean ext_flag = false;
+				String isClrFlg = ""; // 结清标志
+				String cocontractno = "";
+				contractno = rs.getString("lnco");
+				isClrFlg = rs.getString("clrflg");
+				lncino = rs.getString("idno");
+				cino = rs.getString("lncino");
+				globalCino=cino;
+				cocontractno = rs.getString("cocontractno");
+				lntype = rs.getString("lntype");
+//				Date getdate = rs.getDate("isdate");
+//				isdate = DateUtil.dateToString(getdate);
+				isdate = rs.getString("isdate");
+//				Date getopdt = rs.getDate("opdt");
+//				opdt = DateUtil.dateToString(getopdt);
+				opdt = rs.getString("opdt");
+//				Date eidt = rs.getDate("duedt");
+//				tedate = DateUtil.dateToString(eidt);
+				tedate =  rs.getString("duedt");
+				curcd = rs.getString("curcd");
+				irchgmod = rs.getString("irchgmod");
+				payAmount = rs.getDouble("lnamt");
+				String brcode=rs.getString("brcd");//机构号
+				ps_bankCodeInfo.setString(1,brcode );
+				rs_bankCodeInfo = ps_bankCodeInfo.executeQuery();
+				if (rs_bankCodeInfo.next())
+					brno=rs_bankCodeInfo.getString("jbcode");
+				boolean issxFlg = false; // 是否是授信卡类 邯郸
+				issxFlg = contractno.substring(0, 2).equals("gd")||!"666".equals(lntype);
+				if ("0".equals(irchgmod.trim())) {
+					irchgmod = "RF01"; // 固定利率方式
+				} else {
+					irchgmod = "RF02";
+				}
+				if (issxFlg) {
+					intrate = rs.getDouble("usdintrate");
+				} else {
+					ps_sxMessage.setString(1, cino);
+					rs_sxMessage = ps_sxMessage.executeQuery();
+					if (rs_sxMessage.next()) {
+//						String lldh = "";
+//						String llfdfs = "";
+						Double fdll = 0.0;
+//						lldh = rs_sxMessage.getString("lldh");
+//						Date qsrq = rs_sxMessage.getDate("qsrq");
+						Date qsrq = DataFormat.ConvertDate1(rs_sxMessage.getString("qsrq"));
+//						llfdfs = rs_sxMessage.getString("llfdfs");
+						fdll = rs_sxMessage.getDouble("fdll");
+						ps_intrateInfo.setDate(1, (java.sql.Date) qsrq);
+						rs_intrateInfo = ps_intrateInfo.executeQuery();
+						if (rs_intrateInfo.next()) {
+							if (fdll > 0) {
+								intrate = rs_intrateInfo.getDouble("intrate");
+								intrate = intrate * (1 + fdll / 100);
+							} else {
+								intrate = rs_intrateInfo.getDouble("intrate");
+							}
+						}
+					} else {
+						;
+					}
+				}
+
+				guattype = rs.getString("guatcode");
+				/*
+				 * A 质押贷款 B 抵押贷款 B01 房地产抵押贷款 B99 其他抵押贷款 C 保证贷款 C01 联保贷款 C99
+				 * 其他保证贷款 D 信用/免担保贷款 E 组合担保 Z 其他
+				 */
+				switch (guattype.charAt(0)) {
+				case '1': {
+					guattype = "A";
+				}
+					break;
+				case '2': {
+					ps_mortagageinfo.setString(1, cocontractno);
+					rs_mortagageinfo = ps_mortagageinfo.executeQuery();
+					if (rs_mortagageinfo.next()) {
+						if ("1".equals(rs_mortagageinfo.getString("mort_type")
+								.trim())) {
+							guattype = "B01"; // 房地产抵押贷款
+						} else {
+							guattype = "B99"; // 其它抵押贷款
+						}
+					} else {
+						guattype = "B";
+					}
+				}
+					break;
+				case '3': {
+					ps_assureinfo.setString(1, cocontractno);
+					rs_assureinfo = ps_assureinfo.executeQuery();
+					if (rs_assureinfo.next()) {
+						if (rs_assureinfo.getInt("seqno") > 1) {
+							guattype = "C01"; // 联保贷款
+						} else {
+							guattype = "C99";
+						}
+
+					} else {
+						guattype = "C";
+					}
+				}
+					break;
+				case '4': {
+					guattype = "D";
+				}
+					break;
+				case '5':
+				case '6': {
+					guattype = "E";
+				}
+					break;
+				default: {
+					guattype = "Z";
+				}
+					break;
+				}
+
+				ps_termchange.setString(1, contractno);
+				rs_termchange = ps_termchange.executeQuery();
+				while (rs_termchange.next()) {
+					if (("1".equals(rs_termchange.getString("status")))
+							&& ("44".equals(rs_termchange.getString("apptype")))) {
+						ext_flag = true;
+						break;
+					}
+				}
+
+				boolean offFlg = false; // 是否核销
+
+				lnstat = rs.getString("lnstat");
+
+				if (zftxdk.indexOf(lntype) != -1 // 贷款类型 区分下岗失业贷款
+						&& DataFormat.ConvertDate(MonthLastDay).before(
+								rs.getDate("duedt"))) {// 政府贴息贷款，而且没有到期的
+					lnstat = "0";
+				}
+
+				if ("0".equals(lnstat.trim())||"C".equals(lnstat.trim())) {
+					lnstat = "FS01"; // 正常
+				} else if ("1".equals(lnstat.trim())
+						|| "2".equals(lnstat.trim())) {
+					lnstat = "FS01";
+				} else if ("E".equals(lnstat.trim())) {
+					lnstat = "FS04";
+					offFlg = true;
+				}
+				if (ext_flag) {
+					lnstat = "FS02";
+				}
+
+				if ("1".equals(isClrFlg) || offFlg) { // 结清,核销
+					if (issxFlg) {
+//						Date trsfdateb = rs.getDate("clsdt");
+//						trsfDate = DateUtil.dateToString(trsfdateb);
+						trsfDate = rs.getString("clsdt");
+					} else {
+//						Date trsfdateb = rs.getDate("trsf_date");
+//						trsfDate = DateUtil.dateToString(trsfdateb);
+						trsfDate = rs.getString("trsf_date");
+					}
+					// clrFlg = "0";
+				}
+				ps_sumrtnamtRtnint.setString(1, cino.trim());
+				ps_sumrtnamtRtnint.setString(2, cino.trim());
+				ps_sumrtnamtRtnint.setDate(3,
+						(java.sql.Date) DataFormat.ConvertDate(monFirsint));
+				ps_sumrtnamtRtnint.setDate(4,
+						(java.sql.Date) DataFormat.ConvertDate(monLast));
+				rs_sumrtnamtRtnint = ps_sumrtnamtRtnint.executeQuery();
+				if (rs_sumrtnamtRtnint.next()) {
+					// accountAmount = rs_sumrtnamtRtnint.getDouble("rtnamt")
+					// + rs_sumrtnamtRtnint.getDouble("rtnint");
+					accountAmount = rs_sumrtnamtRtnint.getDouble("rtnamt");
+				} else {
+					// 台帐表中无记录,读取核算期供表
+				}
+				rs_sumrtnamtRtnint.close();
+
+				// 业务种类细分
+				lnid = getTypedetail(lntype);
+				if (DataFormat.isEmpty(lnid)) {
+					lnid = "99";
+				}
+				lnid = getTypedetail(lntype);  //与征信接口统一的贷款
+				if (DataFormat.isEmpty(lnid)) {
+					lnid = "99";
+				}
+				if(lntype.equalsIgnoreCase("018")||lntype.equalsIgnoreCase("035")){
+					lnid="41";                 //与征信接口不统一的两种贷款
+				}
+				lnid = String.valueOf(lntypeMap.get(lnid.trim()));// 501
+				//add by weigang.lv 为空的默认给消费类型
+				if(DataFormat.isEmpty(lnid)){
+					lnid="F0219";
+				}
+				//数据入库
+				if (!DataFormat.isEmpty(contractno) && accountAmount != 0) {
+					
+					ps_insertData.setDate(1, (java.sql.Date) DataFormat.ConvertDate(last_upd_date));
+					ps_insertData.setString(2, brno == null
+							|| brno.trim().length() < 1 ? bankReport_bankCode
+							: brno.trim());
+					ps_insertData.setString(3, cust_type);
+					ps_insertData.setString(4, lncino);
+					ps_insertData.setString(5, indus_type);
+					ps_insertData.setString(6, reg_place);
+					ps_insertData.setString(7, invest_element);
+					ps_insertData.setString(8, compa_scale);
+					ps_insertData.setString(9, cino);
+					ps_insertData.setString(10,lnid);
+					ps_insertData.setString(11,industry);
+					ps_insertData.setDate(12,(java.sql.Date) DataFormat.ConvertDate1(isdate));
+					ps_insertData.setDate(13,(java.sql.Date) DataFormat.ConvertDate1(tedate));
+					if ("".equals(trsfDate)) {
+						ps_insertData.setDate(14, null); // 展期日期
+					} else {
+						ps_insertData.setDate(14,(java.sql.Date) DataFormat.ConvertDate1(trsfDate));// 展期日期
+					}
+					ps_insertData.setString(15,curcd);
+					ps_insertData.setBigDecimal(16, new BigDecimal(accountAmount).setScale(2,BigDecimal.ROUND_HALF_UP));
+					ps_insertData.setString(17, irchgmod);
+					ps_insertData.setBigDecimal(18, new BigDecimal(intrate).setScale(5,BigDecimal.ROUND_HALF_UP));
+					ps_insertData.setString(19, guattype);
+					ps_insertData.setString(20, lnstat);
+					ps_insertData.setString(21, "0");//收回贷款
+					ps_insertData.execute();
+				}
+
+				// 判断是否本月放的款，本月放的则会多一条发生额，放款信息
+				if (!DataFormat.isEmpty(contractno)
+						&& DateUtil.stringToDate(opdt).compareTo(
+								DateUtil.stringToDate(monFirsint))>=0) // 判断是否本月放的款
+				{
+					ps_insertDataF.setDate(1, (java.sql.Date) DataFormat.ConvertDate(last_upd_date));
+					ps_insertDataF.setString(2, brno == null
+							|| brno.trim().length() < 1 ? bankReport_bankCode
+							: brno.trim());
+					ps_insertDataF.setString(3, cust_type);
+					ps_insertDataF.setString(4, lncino);
+					ps_insertDataF.setString(5, indus_type);
+					ps_insertDataF.setString(6, reg_place);
+					ps_insertDataF.setString(7, invest_element);
+					ps_insertDataF.setString(8, compa_scale);
+					ps_insertDataF.setString(9, cino);
+					ps_insertDataF.setString(10,lnid);
+					ps_insertDataF.setString(11,industry);
+					ps_insertDataF.setDate(12,(java.sql.Date) DataFormat.ConvertDate1(isdate));
+					ps_insertDataF.setDate(13,(java.sql.Date) DataFormat.ConvertDate1(tedate));
+					if ("".equals(trsfDate)) {
+						ps_insertDataF.setDate(14, null); // 展期日期
+					} else {
+						ps_insertDataF.setDate(14,(java.sql.Date) DataFormat.ConvertDate1(trsfDate));// 展期日期
+					}
+					ps_insertDataF.setString(15,curcd);
+					ps_insertDataF.setBigDecimal(16, new BigDecimal(payAmount).setScale(2,BigDecimal.ROUND_HALF_UP));
+					ps_insertDataF.setString(17, irchgmod);
+					ps_insertDataF.setBigDecimal(18, new BigDecimal(intrate).setScale(5,BigDecimal.ROUND_HALF_UP));
+					ps_insertDataF.setString(19, guattype);
+					ps_insertDataF.setString(20, lnstat);
+					ps_insertDataF.setString(21, "1");//发放贷款
+					ps_insertDataF.execute();
+				}
+			}
+			conn.commit();
+		} catch (Exception e) {
+			System.out.println("处理借据失败 : " + globalCino);
+			e.printStackTrace();
+			conn.rollback();
+			throw new Exception("插入个人发生额信息出错:" + e.getMessage(), e);
+		} finally {
+			if (rs != null)
+				rs.close();
+			if (ps_results != null)
+				ps_results.close();
+			if (rs_sumrtnamtRtnint != null)
+				rs_sumrtnamtRtnint.close();
+			if (rs_assureinfo != null)
+				rs_assureinfo.close();
+			if (rs_mortagageinfo != null)
+				rs_mortagageinfo.close();
+			if (rs_termchange != null)
+				rs_termchange.close();
+			if (rs_bankCodeInfo != null)
+				rs_bankCodeInfo.close();
+			if (ps_sumrtnamtRtnint != null)
+				ps_sumrtnamtRtnint.close();
+			if (ps_termchange != null)
+				ps_termchange.close();
+			if (ps_bankCodeInfo != null)
+				ps_bankCodeInfo.close();
+			if (ps_intrateInfo != null)
+				ps_intrateInfo.close();
+			if (ps_sxMessage != null)
+				ps_sxMessage.close();
+			DBUtil.close(conn, null, null);
+		}
+		logger.info("....................处理个人贷款发生额信息(loan_incurr_message)end.......................");
+	}
+	
+	public void insertCLoanBalance(String monthEndDate) throws Exception{
+
+		Connection conn = DBUtil.getConnection();
+		PreparedStatement stmt = null;
+		logger.info("....................处理对公贷款余额信息begin.......................");
+		try {
+			//日期为yyyymmdd varchar2
+			StringBuffer query = new StringBuffer();
+			query.append("insert into LOAB(select to_date(b.bbrq,'yyyymmdd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end ");
+			query.append("case when l.cuskind='1' then '0' when l.cuskind='2' then '1' end, ");
+			query.append("substr(b.qydm,0,8)||substr(b.qydm,10,10),upper(b.hy1),case when b.zjlx ='5' then substr(b.zjhm,3,6) else substr(b.zjhm,1,6) end, ");
+			query.append("case when b.qysyzxz='1' then 'A01' when b.qysyzxz='2' then 'A01' when b.qysyzxz='3' then 'A02' when b.qysyzxz='4' then 'A02' ");		
+			query.append("when b.qysyzxz='5' then 'A02' when b.qysyzxz='6' then 'A02' when b.qysyzxz='7' then 'B01' when b.qysyzxz='8' then 'B01' ");		
+			query.append("when b.qysyzxz='9' then 'B03' when b.qysyzxz='10' then 'B03' when b.qysyzxz='11' then 'B03' when b.qysyzxz='12' then 'B02' ");	  
+			query.append("when b.qysyzxz='13' then 'B02' when b.qysyzxz='14' then 'A01' when b.qysyzxz='15' then 'A01' else  'B01' end, ");
+			query.append("case when b.qygm='0' then 'CS01' when b.qygm='1' then 'CS01' when b.qygm='2' then 'CS02' when b.qygm='3' then 'CS03' when b.qygm='4' then 'CS04' else 'CS04' end, ");
+			query.append("trim(d.duebillno), case when b.dklb='1' then 'F022' else 'F05' end, ");
+			query.append("b.hy2, to_date(b.dksq,'yyyymmdd'), to_date(b.dkzq,'yyyymmdd'), to_date(d.extensiondate,'yyyymmdd'), 'CNY', ''||round(b.dkye,2)||'', case  when b.fdb is null then 'RF01' else 'RF02' end, ");
+			query.append("''||round(b.dkll,5)||'', case when b.dbfs='22' then 'B99' when b.dbfs='23' then 'A' when b.dbfs='100' then 'D' when b.dbfs='210' then 'C99' else 'Z' end, ");
+			query.append("case when b.dkfl4='11' then 'FQ01' when b.dkfl4='21' then 'FQ02' when b.dkfl4='30' then 'FQ03' when b.dkfl4='40' then 'FQ04' else 'FQ05' end, ");
+			query.append("case when b.zqbz='1' then 'FS02' when b.dkfl3 in('2','3','4') then 'FS03' else 'FS01' end ");
+			query.append("from loan l,loanduebill d,b101 b,ind_levelcatalog ind,BRNO_JBCD_LINK li ");
+			query.append("where l.ContractNo=b.dkht and l.appid=d.appid and b.hy1=ind.ind_levelcode and b.bmhh = li.bmhh and ");
+			query.append("b.dkye !='0.00'  and b.bbrq = ? ) ");
+			
+			stmt = conn.prepareStatement(query.toString());
+			stmt.setString(1, DateUtil.dateToNumber(DataFormat.ConvertDate(monthEndDate)));
+			stmt.execute();
+			conn.commit();
+		} catch (SQLException e) {
+			conn.rollback();
+			throw new Exception("处理对公贷款余额信息出错:" + e.getMessage(), e);
+		} finally{
+			DBUtil.close(conn, stmt, null);
+		}
+		logger.info("....................处理对公贷款余额信息begin.......................");
+	}
+
+	public void insertCLoanAccrual(String monthStartDate, String monthEndDate) throws Exception{
+		
+		Connection conn = DBUtil.getConnection();
+		PreparedStatement stmt = null;
+		logger.info("....................处理对公贷款发生额信息begin.......................");
+		try {
+			//日期为yyyymmdd varchar2
+			StringBuffer query = new StringBuffer();
+			query.append("insert into LOAF(select to_date(b.bbrq,'yyyymmdd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end ");
+			query.append("case when l.cuskind='1' then '0' when l.cuskind='2' then '1' end, ");
+			query.append("substr(b.qydm,0,8)||substr(b.qydm,10,10),upper(b.hy1),case when b.zjlx ='5' then substr(b.zjhm,3,6) else substr(b.zjhm,1,6) end, ");
+			query.append("case when b.qysyzxz='1' then 'A01' when b.qysyzxz='2' then 'A01' when b.qysyzxz='3' then 'A02' when b.qysyzxz='4' then 'A02' ");		
+			query.append("when b.qysyzxz='5' then 'A02' when b.qysyzxz='6' then 'A02' when b.qysyzxz='7' then 'B01' when b.qysyzxz='8' then 'B01' ");		
+			query.append("when b.qysyzxz='9' then 'B03' when b.qysyzxz='10' then 'B03' when b.qysyzxz='11' then 'B03' when b.qysyzxz='12' then 'B02' ");	  
+			query.append("when b.qysyzxz='13' then 'B02' when b.qysyzxz='14' then 'A01' when b.qysyzxz='15' then 'A01' else  'B01' end, ");
+			query.append("case when b.qygm='0' then 'CS01' when b.qygm='1' then 'CS01' when b.qygm='2' then 'CS02' when b.qygm='3' then 'CS03' when b.qygm='4' then 'CS04' else 'CS04' end, ");
+			query.append("trim(d.duebillno), case when b.dklb='1' then 'F022' else 'F05' end, b.hy3, to_date(b.dksq,'yyyymmdd'), to_date(b.dkzq,'yyyymmdd'), ");
+			query.append("case when acc.opbriefcode='022' then to_date(acc.lastupdatedate,'yyyymmdd') when acc.opbriefcode='322' then to_date(acc.lastupdatedate,'yyyymmdd') else to_date(d.realmaturedate,'yyyymmdd') end, ");
+			query.append("'CNY', ''||round(acc.occursum,2)||'', case when b.fdb is null then 'RF01' else 'RF02' end, ''||round(b.dkll,5)||'', ");
+			query.append("case when b.dbfs='22' then 'B99' when b.dbfs='23' then 'A' when b.dbfs='100' then 'D' when b.dbfs='210' then 'C99' else 'Z' end, 'FS01', ");
+			query.append("case when acc.creditdebitflag='1' then '1' else '0' end ");
+			query.append("from loan l,loanduebill d,b101 b,accountentry acc,BRNO_JBCD_LINK li ");
+			query.append("where l.ContractNo=b.dkht and l.appid=d.appid and  l.appid=acc.appid and b.bmhh = li.bmhh and ");
+			query.append("acc.occurdate between ? and ? and b.bbrq = ? and acc.opflag='1' )");
+			
+			stmt = conn.prepareStatement(query.toString());
+			stmt.setString(1, DateUtil.dateToNumber(DataFormat.ConvertDate(monthStartDate)));
+			stmt.setString(2, DateUtil.dateToNumber(DataFormat.ConvertDate(monthEndDate)));
+			stmt.setString(3, DateUtil.dateToNumber(DataFormat.ConvertDate(monthEndDate)));
+			stmt.execute();
+			conn.commit();
+		} catch (SQLException e) {
+			conn.rollback();
+			throw new Exception("处理对公贷款发生额信息出错:" + e.getMessage(), e);
+		} finally{
+			DBUtil.close(conn, stmt, null);
+		}
+		logger.info("....................处理对公贷款发生额信息end.......................");
+	}
+	
+	public void deleteJBBatchData(String monthEndDate) throws Exception{
+
+		
+		Connection conn = DBUtil.getConnection();
+		Statement stmt = conn.createStatement();
+		logger.info("....................删除已跑批数据begin.......................");
+		try {
+			String depositBalanceSql = "delete from DEPB where SJRQ= to_date('" + monthEndDate+"','yyyy-mm-dd') ";
+			String loanBalanceSql = "delete from LOAB where SJRQ = to_date('" + monthEndDate+"','yyyy-mm-dd') ";
+			String loanAccrualSql = "delete from LOAF where SJRQ = to_date('" + monthEndDate+"','yyyy-mm-dd') ";
+			
+			stmt.execute(depositBalanceSql);
+			stmt.execute(loanBalanceSql);
+			stmt.execute(loanAccrualSql);
+			conn.commit();
+		} catch (SQLException e) {
+			conn.rollback();
+			throw new Exception("insert Column error!===" + e.getMessage(), e);
+		} finally{
+			DBUtil.close(conn, stmt, null);
+		}
+		logger.info("....................删除已跑批数据end.......................");
+	
+	}
+	
+	// 业务种类细分转换
+	private String getTypedetail(String lnid) throws Exception {
+		if (DataFormat.isEmpty(lnid)) {
+			return lnid;
+		}
+		StringBuffer sqlstr = new StringBuffer();
+		sqlstr.append("select lntype_info.misc from lntype_info ");
+		sqlstr.append("where lntype_info.lntype = '");
+		sqlstr.append(lnid);
+		sqlstr.append("'");
+		Connection conn = DBUtil.getConnection();
+		Statement stmt = conn.createStatement();
+		ResultSet rs = stmt.executeQuery(sqlstr.toString());
+		String rtnstr = "";
+		while (rs.next()) {
+			rtnstr = rs.getString("misc");
+		}
+		DBUtil.close(null, stmt, rs);
+		return rtnstr;
+	}
+	
+	/*
+	 * @title :根据传入的参数转换为相应的个人余额信息标准
+	 * @param 数据库连接,内部数据字典值,数据字典映射ID
+	 * @return 个人余额类型
+	 */
+	private Map getDataDicMap(int data_dic_map_id){
+		String outcode = "";
+		String incode = "";
+		Map<String, String> map = new HashMap<String, String>();
+		String sql = "select incode , outcode from data_dic_map where map_type='"
+				+ data_dic_map_id + "'";
+		Connection conn = null;
+		Statement stmt = null;
+		ResultSet rs = null;
+		try {
+			conn = DBUtil.getConnection();
+			stmt = conn.createStatement();
+			rs = stmt.executeQuery(sql);
+			while (rs.next()) {
+				incode = DataFormat.trim(rs.getString(1));
+				outcode = DataFormat.trim(rs.getString(2));
+				map.put(incode, outcode);
+			}
+		
+		}catch (SQLException e){
+			logger.info("获取data_dic_map信息出错:"+ e.getMessage());
+		}finally {
+			DBUtil.close(null, stmt, rs);
+		}
+		return map;
+	}
+}

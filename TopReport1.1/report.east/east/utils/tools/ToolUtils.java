@@ -114,7 +114,7 @@ public class ToolUtils {
 	 * @throws Exception
 	 */
 	public static String formatString(String fieldType, String fieldValue,
-			int fieldLength, String specflag, int fieldLength2,int fieldSetFlag)
+			int fieldLength, String specflag, int fieldLength2,int fieldSetFlag, String separator)
 			throws Exception {
 		
 		if (fieldValue == null || "".equals(fieldValue.trim())) {
@@ -141,7 +141,7 @@ public class ToolUtils {
 				fieldValue=changData(fieldValue,fieldSetFlag);	
 			}
 		}
-		return fieldValue.trim()+",";
+		return fieldValue.trim()+separator;
 	}	
 
 	//名称变形,身份证变形 '不变形-0,名称变形-1,身份证变形-2,名称暂时不取-3,身份证暂时不取-4,其他暂不取-5,其他暂时不变形-6'

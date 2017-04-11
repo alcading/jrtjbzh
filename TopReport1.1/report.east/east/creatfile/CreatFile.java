@@ -13,18 +13,17 @@ import java.util.Map;
 import java.util.Set;
 
 import com.huateng.ebank.framework.util.DateUtil;
+import com.huateng.report.imports.batch.ReportProcessJB;
 import com.huateng.report.imports.common.Constants;
 import com.huateng.report.utils.ReportUtils;
-
-import resource.bean.pub.Bctl;
-
-import resource.report.dao.ROOTDAOUtils;
 
 import east.dao.BaseDao;
 import east.special.product.UpdateAndQuery;
 import east.utils.tools.ToolUtils;
 import east.utils.tools.XmlUtil;
 import east.vo.DefautValueVO;
+import resource.bean.pub.Bctl;
+import resource.report.dao.ROOTDAOUtils;
 
 
 /**
@@ -71,6 +70,15 @@ public class CreatFile {
 			path.mkdir();
 		}
 		
+		//生成金标文件路径加年月日路径
+		String jbFilePath = ReportUtils.getSysParamsValue(Constants.PARAM_DIR,
+				Constants.PARAM_DIR_0103, "");
+		jbFilePath = jbFilePath + File.separator + args[0].substring(0, 6) + File.separator;
+		File jbPath = new File(jbFilePath);
+		if(!jbPath.exists()){
+			jbPath.mkdir();
+		}
+				
 		Map retMap;
 		Boolean retFlag = false;
 		String retType = "";
@@ -85,7 +93,7 @@ public class CreatFile {
 		Set<String> monthSet = new HashSet<String>();
 		Set<String> quarterSet = new HashSet<String>();
 		Set<String> yearSet = new HashSet<String>();
-		Set<String> cSet = new HashSet<String>();
+		Set<String> jbSet = new HashSet<String>();
 		for (String tableName : tableInfoMap.keySet()) {
 			//start=System.currentTimeMillis();
 			/*if(!tableName.equals("JGB")){
@@ -117,7 +125,9 @@ public class CreatFile {
 			if("Y".equals(retType)){
 				yearSet.add(tableName);
 			}
-				
+			if("J".equals(retType)){
+				jbSet.add(tableName);
+			}	
 		}
 		
 		//备份cpwj到cpwj_bak
@@ -222,6 +232,22 @@ public class CreatFile {
 			}		
 		}
 		
+		//跑金标报送的数据
+		for(String tableName : jbSet){
+			try{
+				start=System.currentTimeMillis();
+				System.out.println("star===tableName:"+tableName);
+				
+				writeJBFile(tableName, args[0], sqlMap, tableInfoMap, defautValue, jbFilePath, bctl);
+				
+				end=System.currentTimeMillis();
+				System.out.println("end===time(s):["+(end-start)/1000+"]!");
+			}catch(Exception e) {
+				System.err.println(e.getMessage());
+				continue;
+			}		
+		}
+				
 		//还原cpwj_bak到cpwj
 		//BaseDao.delCpwjOrBak("cpwj");
 		//BaseDao.revertCpwj();
@@ -253,6 +279,39 @@ public class CreatFile {
 		System.out.println(tableName + "file***over,sum:"+ count +"！");
 		//end=System.currentTimeMillis();
 		//System.out.println("end===time(s):["+(end-start)/1000+"]!");
+	}
+	
+	/*
+	 * 生成金标报送文件 
+	 */
+	public static void writeJBFile(String tableName, String workdate, Map sqlMap, Map tableInfoMap ,DefautValueVO defautValue
+			, String filePath, Bctl bctl)throws Exception{
+		String fileName=null;	
+		fileName = filePath + bctl.getFinanceCode().trim()+"-" + tableName + "-" + ToolUtils.formatDate(workdate);
+		File datFile = new File(fileName + ".dat");
+		BufferedWriter bw = new BufferedWriter(new FileWriter(datFile));
+		
+		int count = BaseDao.queryAndWriteJBFile(tableName, workdate, sqlMap, tableInfoMap, bw, defautValue);
+	
+		bw.close();
+		//log文件
+		BufferedWriter flagFileWriter = new BufferedWriter(new FileWriter(fileName + ".log"));
+		flagFileWriter.write(datFile.getName() + "\n" );
+		flagFileWriter.write(datFile.length() + "\n" );
+		Calendar calendar=Calendar.getInstance();
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		flagFileWriter.write(sdf.format(calendar.getTime())+"\n");
+		flagFileWriter.write("Y".trim());
+		flagFileWriter.close();
+
+		System.out.println(tableName + "file***over,sum:"+ count +"！");
+		//end=System.currentTimeMillis();
+		//System.out.println("end===time(s):["+(end-start)/1000+"]!");
+	}
+	
+	public static void generateJBData() throws Exception {
+		ReportProcessJB jbProcess = new ReportProcessJB();
+		jbProcess.generateData();
 	}
 	
 	public static void creatManualJgbsFile(Map<String, List<String>> tableInfoMap) throws Exception {
