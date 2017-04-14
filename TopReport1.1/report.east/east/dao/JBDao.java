@@ -29,31 +29,10 @@ public class JBDao {
 	private Map clrClass = null;
 	private Map lntypeMap = null;
 	
-	public JBDao(){
-		getHeadBranchNo();
+	public JBDao() throws Exception{
+		bankReport_bankCode = BaseDao.getJBBankCode();
 		clrClass = getDataDicMap(500);// 五级分类
 		lntypeMap = getDataDicMap(501);
-	}
-	
-	public void getHeadBranchNo(){
-
-		Connection conn = DBUtil.getConnection();
-		Statement stmt = null;
-		ResultSet rs = null;
-		try {
-			stmt = conn.createStatement();
-			StringBuffer query = new StringBuffer();
-			query.append("select jbcode from BRNO_JBCD_LINK where brlevel = '1' ");
-			
-			rs = stmt.executeQuery(query.toString());
-			while(rs.next()){
-				bankReport_bankCode = rs.getString("jbcode");
-			}
-		} catch (SQLException e) {
-			logger.info("获取总行金融机构编码出错:"+ e.getMessage());
-		} finally{
-			DBUtil.close(conn, stmt, rs);
-		}
 	}
 	
 	public void insertDepositBalance(String monthEndDate) throws Exception{
@@ -66,7 +45,7 @@ public class JBDao {
 			StringBuffer query = new StringBuffer();
 			query.append("insert into DEPB( ");
 			//活期对公
-			query.append("select to_date('"+ monthEndDate+"','yyyy-mm-dd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,'0',hq.zhdh,hq.zhdh, ");
+			query.append("select to_date('"+ monthEndDate+"','yyyymmdd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,'0',hq.zhdh,hq.zhdh, ");
 			query.append("case when lb.ckcplb is not null then lb.ckcplb else 'D01' end ,null,null,'CNY', ");
 			query.append("hq.zhye,'RF02', case when hq.fdll >0 then hq.fdll else llb.ll end ");		
 			query.append("from hqdgzwj hq ");		
@@ -76,7 +55,7 @@ public class JBDao {
 			query.append("where hq.jlzt not in ('0','2') and hq.xdcked = 0 and hq.zhye > 0 ");
 			query.append("union all ");
 			//--对公协定存款
-			query.append("select to_date('"+ monthEndDate+"','yyyy-mm-dd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,'0',hq.zhdh,hq.zhdh,'D051', ");		
+			query.append("select to_date('"+ monthEndDate+"','yyyymmdd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,'0',hq.zhdh,hq.zhdh,'D051', ");		
 			query.append("null,null,'CNY',hq.zhye,'RF02', case when hq.fdll >0 then hq.fdll else llb.ll end ");
 			query.append("from hqdgzwj hq ");
 			query.append("left join brno_jbcd_link li on hq.dqdh||jgdh = li.brno ");
@@ -85,7 +64,7 @@ public class JBDao {
 			query.append("where hq.jlzt not in ('0','2') ");
 			query.append("and hq.xdcked > 0 and hq.zhye > 0 and hq.xdcked >= hq.zhye ");
 			query.append("union all ");
-			query.append("select to_date('"+ monthEndDate+"','yyyy-mm-dd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,'0',hq.zhdh,hq.zhdh,'D051', ");
+			query.append("select to_date('"+ monthEndDate+"','yyyymmdd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,'0',hq.zhdh,hq.zhdh,'D051', ");
 			query.append("null,null,'CNY',hq.xdcked,'RF02', case when hq.fdll >0 then hq.fdll else llb.ll end ");
 			query.append("from hqdgzwj hq ");
 			query.append("left join brno_jbcd_link li on hq.dqdh||jgdh = li.brno ");
@@ -94,7 +73,7 @@ public class JBDao {
 			query.append("where hq.jlzt not in ('0','2') ");
 			query.append("and hq.xdcked > 0 and hq.zhye > 0 and hq.xdcked < hq.zhye ");
 			query.append("union all ");
-			query.append("select to_date('"+ monthEndDate+"','yyyy-mm-dd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,'0',hq.zhdh,hq.zhdh,'D052', ");
+			query.append("select to_date('"+ monthEndDate+"','yyyymmdd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,'0',hq.zhdh,hq.zhdh,'D052', ");
 			query.append("null,null,'CNY', hq.zhye - hq.xdcked,'RF02', case when hq.fdll >0 then hq.fdll else llb.ll end ");
 			query.append("from hqdgzwj hq ");
 			query.append("left join brno_jbcd_link li on hq.dqdh||jgdh = li.brno ");
@@ -104,7 +83,7 @@ public class JBDao {
 			query.append("and hq.xdcked > 0 and hq.zhye > 0 and hq.xdcked < hq.zhye ");
 			query.append("union all ");
 			//对私活期
-			query.append("select to_date('"+ monthEndDate+"','yyyy-mm-dd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,'1',hq.zhdh,hq.zhdh,case when lb.ckcplb is not null then lb.ckcplb else 'D01' end, ");
+			query.append("select to_date('"+ monthEndDate+"','yyyymmdd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,'1',hq.zhdh,hq.zhdh,case when lb.ckcplb is not null then lb.ckcplb else 'D01' end, ");
 			query.append("null,null,'CNY',hq.zhye,'RF02', case when hq.fdll >0 then hq.fdll else llb.ll end ");
 			query.append("from dshqzwj hq ");
 			query.append("left join brno_jbcd_link li on hq.dqdh||jgdh = li.brno ");
@@ -277,10 +256,10 @@ public class JBDao {
 						Double fdll = 0.0;
 //						lldh = rs_sxMessage.getString("lldh");
 //						Date qsrq = rs_sxMessage.getDate("qsrq");// 贷款起始日期
-						Date qsrq = DataFormat.ConvertDate1(rs_sxMessage.getString("qsrq"));
+//						Date qsrq = DataFormat.ConvertDate1(rs_sxMessage.getString("qsrq"));
 //						llfdfs = rs_sxMessage.getString("llfdfs");
 						fdll = rs_sxMessage.getDouble("fdll");
-						ps_intrateInfo.setDate(1, (java.sql.Date) qsrq);
+						ps_intrateInfo.setString(1, rs_sxMessage.getString("qsrq"));
 						rs_intrateInfo = ps_intrateInfo.executeQuery();
 						if (rs_intrateInfo.next()) {
 							if (fdll > 0) {
@@ -354,7 +333,7 @@ public class JBDao {
 				lnstat = rs.getString("lnstat");
 
 				if (zftxdk.indexOf(lntype) != -1 // 贷款类型 区分下岗失业贷款
-						&& DataFormat.ConvertDate(MonthLastDay).before(DataFormat.ConvertDate1(rs.getString("duedt"))
+						&& DataFormat.ConvertDate1(MonthLastDay).before(DataFormat.ConvertDate1(rs.getString("duedt"))
 								)) {// 政府贴息贷款，而且没有到期的
 					lnstat = "0";
 					clr_class = "0";
@@ -374,7 +353,7 @@ public class JBDao {
 
 				if (!DataFormat.isEmpty(contractno)) {
 					// 业务种类细分
-					lnid = getTypedetail(lntype);  //与征信接口统一的贷款
+					lnid = getTypedetail(lntype,conn);  //与征信接口统一的贷款
 					if (DataFormat.isEmpty(lnid)) {
 						lnid = "99";
 					}
@@ -387,7 +366,7 @@ public class JBDao {
 						lnid="F0219";
 					}
 					
-					ps_insertData.setDate(1, (java.sql.Date) DataFormat.ConvertDate(last_upd_date));
+					ps_insertData.setDate(1, (java.sql.Date) DataFormat.ConvertDate1(last_upd_date));
 					ps_insertData.setString(2, brno == null
 							|| brno.trim().length() < 1 ? bankReport_bankCode
 							: brno.trim());
@@ -420,7 +399,6 @@ public class JBDao {
 			conn.commit();
 		} catch (Exception e) {
 			System.out.println("处理借据失败 : " + globalCino);
-			e.printStackTrace();
 			conn.rollback();
 			throw new Exception("插入个人余额信息出错:" + e.getMessage(), e);
 		} finally {
@@ -465,7 +443,7 @@ public class JBDao {
 		dbSql.append("select  clb.lnco,cui.idno,clb.brcd,clb.lncino,clb.lnid,cli.isdate,clb.opdt,clb.duedt,clc.tedate,clb.clsdt,clc.trsf_date,clb.curcd ,clb.lnamt,clb.irchgmod,clb.usdintrate,cli.guatcode,clb.lnstat,cli.clr_class,clc.ext_cnt,cli.lntype,cli.cocontractno,clb.clrflg  ");// ,
 		dbSql.append("from  loaninfo cli,tla_lncino_base clb,loancino clc,  customer_info cui   ");
 		dbSql.append("where ");
-		dbSql.append("  clb.lnco = cli.contractno and clb.lncino=clc.cino and clb.custno=cui.custcd  and ( clb.lncino in ( select lncino from custcredit_tla_lnrtnlog ctl  where ctl.rtndt between ? and ?  and  ctl.rtnamt<>0 )  or clb.opdt>= ? ) and clb.lnbal>=0 and clb.lnid not in ('101101','150101')  ");
+		dbSql.append("  clb.lnco = cli.contractno and clb.lncino=clc.cino and clb.custno=cui.custcd  and ( clb.lncino in ( select lncino from tla_lnrtnlog ctl  where ctl.rtndt between ? and ?  and  ctl.rtnamt<>0 )  or clb.opdt>= ? ) and clb.lnbal>=0 and clb.lnid not in ('101101','150101')  ");
 		//and clb.acbrcd in ('90801','90802')
 		//and clb.lnstat != 'V' and clb.lnstat != 'C' and clb.clrflg<>'1'
 		dbSql.append("order by clb.lnco ");
@@ -521,18 +499,19 @@ public class JBDao {
 		try {
 			System.out.println("[" + dbSql.toString() + "]");
 			// 取本月第一天
-			String monFirsint = DateUtil.dateToString(DateUtil
-					.getFirstDate(DataFormat.ConvertDate(monthEndDate)));
+//			String monFirsint = DateUtil.dateToString(DateUtil
+//					.getFirstDate(DataFormat.ConvertDate(monthEndDate)));
 			// 取本月最后一天
 			String monLast = monthEndDate;
 			String MonthLastDay = monthEndDate;
 			Date tsp1 = new Date();
 			ps_results.setDate(1,
-					(java.sql.Date) DataFormat.ConvertDate(monFirsint));
+					(java.sql.Date) DataFormat.ConvertDate1(monthStartDate));
 			ps_results.setDate(2,
-					(java.sql.Date) DataFormat.ConvertDate(monLast));
-			ps_results.setDate(3,
-					(java.sql.Date) DataFormat.ConvertDate(monFirsint));
+					(java.sql.Date) DataFormat.ConvertDate1(monLast));
+//			ps_results.setDate(3,
+//					(java.sql.Date) DataFormat.ConvertDate(monFirsint));
+			ps_results.setString(3, monthStartDate);
 			rs = ps_results.executeQuery();
 			Date tsp2 = new Date();
 			System.out.println("sql run time1:"
@@ -607,10 +586,10 @@ public class JBDao {
 						Double fdll = 0.0;
 //						lldh = rs_sxMessage.getString("lldh");
 //						Date qsrq = rs_sxMessage.getDate("qsrq");
-						Date qsrq = DataFormat.ConvertDate1(rs_sxMessage.getString("qsrq"));
+//						Date qsrq = DataFormat.ConvertDate1(rs_sxMessage.getString("qsrq"));
 //						llfdfs = rs_sxMessage.getString("llfdfs");
 						fdll = rs_sxMessage.getDouble("fdll");
-						ps_intrateInfo.setDate(1, (java.sql.Date) qsrq);
+						ps_intrateInfo.setString(1, rs_sxMessage.getString("qsrq"));
 						rs_intrateInfo = ps_intrateInfo.executeQuery();
 						if (rs_intrateInfo.next()) {
 							if (fdll > 0) {
@@ -695,8 +674,8 @@ public class JBDao {
 				lnstat = rs.getString("lnstat");
 
 				if (zftxdk.indexOf(lntype) != -1 // 贷款类型 区分下岗失业贷款
-						&& DataFormat.ConvertDate(MonthLastDay).before(
-								rs.getDate("duedt"))) {// 政府贴息贷款，而且没有到期的
+						&& DataFormat.ConvertDate1(MonthLastDay).before(DataFormat.ConvertDate1(
+								rs.getString("duedt")))) {// 政府贴息贷款，而且没有到期的
 					lnstat = "0";
 				}
 
@@ -728,9 +707,9 @@ public class JBDao {
 				ps_sumrtnamtRtnint.setString(1, cino.trim());
 				ps_sumrtnamtRtnint.setString(2, cino.trim());
 				ps_sumrtnamtRtnint.setDate(3,
-						(java.sql.Date) DataFormat.ConvertDate(monFirsint));
+						(java.sql.Date) DataFormat.ConvertDate1(monthStartDate));
 				ps_sumrtnamtRtnint.setDate(4,
-						(java.sql.Date) DataFormat.ConvertDate(monLast));
+						(java.sql.Date) DataFormat.ConvertDate1(monLast));
 				rs_sumrtnamtRtnint = ps_sumrtnamtRtnint.executeQuery();
 				if (rs_sumrtnamtRtnint.next()) {
 					// accountAmount = rs_sumrtnamtRtnint.getDouble("rtnamt")
@@ -742,11 +721,11 @@ public class JBDao {
 				rs_sumrtnamtRtnint.close();
 
 				// 业务种类细分
-				lnid = getTypedetail(lntype);
+				lnid = getTypedetail(lntype,conn);
 				if (DataFormat.isEmpty(lnid)) {
 					lnid = "99";
 				}
-				lnid = getTypedetail(lntype);  //与征信接口统一的贷款
+				lnid = getTypedetail(lntype,conn);  //与征信接口统一的贷款
 				if (DataFormat.isEmpty(lnid)) {
 					lnid = "99";
 				}
@@ -761,7 +740,7 @@ public class JBDao {
 				//数据入库
 				if (!DataFormat.isEmpty(contractno) && accountAmount != 0) {
 					
-					ps_insertData.setDate(1, (java.sql.Date) DataFormat.ConvertDate(last_upd_date));
+					ps_insertData.setDate(1, (java.sql.Date) DataFormat.ConvertDate1(last_upd_date));
 					ps_insertData.setString(2, brno == null
 							|| brno.trim().length() < 1 ? bankReport_bankCode
 							: brno.trim());
@@ -793,10 +772,10 @@ public class JBDao {
 
 				// 判断是否本月放的款，本月放的则会多一条发生额，放款信息
 				if (!DataFormat.isEmpty(contractno)
-						&& DateUtil.stringToDate(opdt).compareTo(
-								DateUtil.stringToDate(monFirsint))>=0) // 判断是否本月放的款
+						&& DateUtil.stringToDate2(opdt).compareTo(
+								DateUtil.stringToDate2(monthStartDate))>=0) // 判断是否本月放的款
 				{
-					ps_insertDataF.setDate(1, (java.sql.Date) DataFormat.ConvertDate(last_upd_date));
+					ps_insertDataF.setDate(1, (java.sql.Date) DataFormat.ConvertDate1(last_upd_date));
 					ps_insertDataF.setString(2, brno == null
 							|| brno.trim().length() < 1 ? bankReport_bankCode
 							: brno.trim());
@@ -829,7 +808,6 @@ public class JBDao {
 			conn.commit();
 		} catch (Exception e) {
 			System.out.println("处理借据失败 : " + globalCino);
-			e.printStackTrace();
 			conn.rollback();
 			throw new Exception("插入个人发生额信息出错:" + e.getMessage(), e);
 		} finally {
@@ -870,7 +848,7 @@ public class JBDao {
 		try {
 			//日期为yyyymmdd varchar2
 			StringBuffer query = new StringBuffer();
-			query.append("insert into LOAB(select to_date(b.bbrq,'yyyymmdd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end ");
+			query.append("insert into LOAB(select to_date(b.bbrq,'yyyymmdd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end, ");
 			query.append("case when l.cuskind='1' then '0' when l.cuskind='2' then '1' end, ");
 			query.append("substr(b.qydm,0,8)||substr(b.qydm,10,10),upper(b.hy1),case when b.zjlx ='5' then substr(b.zjhm,3,6) else substr(b.zjhm,1,6) end, ");
 			query.append("case when b.qysyzxz='1' then 'A01' when b.qysyzxz='2' then 'A01' when b.qysyzxz='3' then 'A02' when b.qysyzxz='4' then 'A02' ");		
@@ -888,7 +866,7 @@ public class JBDao {
 			query.append("b.dkye !='0.00'  and b.bbrq = ? ) ");
 			
 			stmt = conn.prepareStatement(query.toString());
-			stmt.setString(1, DateUtil.dateToNumber(DataFormat.ConvertDate(monthEndDate)));
+			stmt.setString(1, monthEndDate);
 			stmt.execute();
 			conn.commit();
 		} catch (SQLException e) {
@@ -908,7 +886,7 @@ public class JBDao {
 		try {
 			//日期为yyyymmdd varchar2
 			StringBuffer query = new StringBuffer();
-			query.append("insert into LOAF(select to_date(b.bbrq,'yyyymmdd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end ");
+			query.append("insert into LOAF(select to_date(b.bbrq,'yyyymmdd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end, ");
 			query.append("case when l.cuskind='1' then '0' when l.cuskind='2' then '1' end, ");
 			query.append("substr(b.qydm,0,8)||substr(b.qydm,10,10),upper(b.hy1),case when b.zjlx ='5' then substr(b.zjhm,3,6) else substr(b.zjhm,1,6) end, ");
 			query.append("case when b.qysyzxz='1' then 'A01' when b.qysyzxz='2' then 'A01' when b.qysyzxz='3' then 'A02' when b.qysyzxz='4' then 'A02' ");		
@@ -916,7 +894,7 @@ public class JBDao {
 			query.append("when b.qysyzxz='9' then 'B03' when b.qysyzxz='10' then 'B03' when b.qysyzxz='11' then 'B03' when b.qysyzxz='12' then 'B02' ");	  
 			query.append("when b.qysyzxz='13' then 'B02' when b.qysyzxz='14' then 'A01' when b.qysyzxz='15' then 'A01' else  'B01' end, ");
 			query.append("case when b.qygm='0' then 'CS01' when b.qygm='1' then 'CS01' when b.qygm='2' then 'CS02' when b.qygm='3' then 'CS03' when b.qygm='4' then 'CS04' else 'CS04' end, ");
-			query.append("trim(d.duebillno), case when b.dklb='1' then 'F022' else 'F05' end, b.hy3, to_date(b.dksq,'yyyymmdd'), to_date(b.dkzq,'yyyymmdd'), ");
+			query.append("trim(d.duebillno), case when b.dklb='1' then 'F022' else 'F05' end, b.hy2, to_date(b.dksq,'yyyymmdd'), to_date(b.dkzq,'yyyymmdd'), ");
 			query.append("case when acc.opbriefcode='022' then to_date(acc.lastupdatedate,'yyyymmdd') when acc.opbriefcode='322' then to_date(acc.lastupdatedate,'yyyymmdd') else to_date(d.realmaturedate,'yyyymmdd') end, ");
 			query.append("'CNY', ''||round(acc.occursum,2)||'', case when b.fdb is null then 'RF01' else 'RF02' end, ''||round(b.dkll,5)||'', ");
 			query.append("case when b.dbfs='22' then 'B99' when b.dbfs='23' then 'A' when b.dbfs='100' then 'D' when b.dbfs='210' then 'C99' else 'Z' end, 'FS01', ");
@@ -926,9 +904,9 @@ public class JBDao {
 			query.append("acc.occurdate between ? and ? and b.bbrq = ? and acc.opflag='1' )");
 			
 			stmt = conn.prepareStatement(query.toString());
-			stmt.setString(1, DateUtil.dateToNumber(DataFormat.ConvertDate(monthStartDate)));
-			stmt.setString(2, DateUtil.dateToNumber(DataFormat.ConvertDate(monthEndDate)));
-			stmt.setString(3, DateUtil.dateToNumber(DataFormat.ConvertDate(monthEndDate)));
+			stmt.setString(1, monthStartDate);
+			stmt.setString(2, monthEndDate);
+			stmt.setString(3, monthEndDate);
 			stmt.execute();
 			conn.commit();
 		} catch (SQLException e) {
@@ -947,9 +925,9 @@ public class JBDao {
 		Statement stmt = conn.createStatement();
 		logger.info("....................删除已跑批数据begin.......................");
 		try {
-			String depositBalanceSql = "delete from DEPB where SJRQ= to_date('" + monthEndDate+"','yyyy-mm-dd') ";
-			String loanBalanceSql = "delete from LOAB where SJRQ = to_date('" + monthEndDate+"','yyyy-mm-dd') ";
-			String loanAccrualSql = "delete from LOAF where SJRQ = to_date('" + monthEndDate+"','yyyy-mm-dd') ";
+			String depositBalanceSql = "delete from DEPB where SJRQ= to_date('" + monthEndDate+"','yyyymmdd') ";
+			String loanBalanceSql = "delete from LOAB where SJRQ = to_date('" + monthEndDate+"','yyyymmdd') ";
+			String loanAccrualSql = "delete from LOAF where SJRQ = to_date('" + monthEndDate+"','yyyymmdd') ";
 			
 			stmt.execute(depositBalanceSql);
 			stmt.execute(loanBalanceSql);
@@ -966,16 +944,15 @@ public class JBDao {
 	}
 	
 	// 业务种类细分转换
-	private String getTypedetail(String lnid) throws Exception {
+	private String getTypedetail(String lnid, Connection conn) throws Exception {
 		if (DataFormat.isEmpty(lnid)) {
 			return lnid;
 		}
 		StringBuffer sqlstr = new StringBuffer();
-		sqlstr.append("select lntype_info.misc from lntype_info ");
-		sqlstr.append("where lntype_info.lntype = '");
+		sqlstr.append("select misc from lntype_info ");
+		sqlstr.append("where lntype = '");
 		sqlstr.append(lnid);
 		sqlstr.append("'");
-		Connection conn = DBUtil.getConnection();
 		Statement stmt = conn.createStatement();
 		ResultSet rs = stmt.executeQuery(sqlstr.toString());
 		String rtnstr = "";

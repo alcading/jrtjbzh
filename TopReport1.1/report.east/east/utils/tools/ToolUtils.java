@@ -134,7 +134,7 @@ public class ToolUtils {
 			} else {
 				money = money.setScale(2, BigDecimal.ROUND_HALF_UP);
 			}
-			fieldValue = money.toString()+",";
+			fieldValue = money.toString()+separator;
 			return fieldValue.trim();
 		}else {
 			if(fieldSetFlag!=0&&!"".equals(fieldValue)){// 非金额处理	
@@ -277,7 +277,43 @@ public class ToolUtils {
 			return "";
 		}
 	}
-
+	
+	/**
+	 * 处理日期
+	 * 返回yyyy-MM-dd
+	 * @param strDate
+	 * @return
+	 */
+	public static String formatDate1(String strDate) {
+		if (strDate == null || "".equals(strDate.trim()))
+			return "";
+		Date date = null;
+		boolean isSuccess = false;
+		try {
+			date = new SimpleDateFormat("yyyy-MM-dd").parse(strDate);
+			isSuccess = true;
+		} catch (ParseException e) {
+		}
+		if (!isSuccess) {
+			try {
+				date = new SimpleDateFormat("yyyyMMdd").parse(strDate);
+				isSuccess = true;
+			} catch (ParseException e) {
+			}
+		}
+		if (!isSuccess) {
+			try {
+				date = new SimpleDateFormat("yyyy/MM/dd").parse(strDate);
+				isSuccess = true;
+			} catch (ParseException e) {
+			}
+		}
+		if (isSuccess) {
+			return new SimpleDateFormat("yyyy-MM-dd").format(date);
+		} else {
+			return "";
+		}
+	}
 	/**
 	 * 处理时间戳
 	 * 

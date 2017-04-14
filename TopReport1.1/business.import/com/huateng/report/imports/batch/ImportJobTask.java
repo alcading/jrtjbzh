@@ -47,8 +47,7 @@ public class ImportJobTask {
 			if (ReportConstant.IMP_FILE_IS_AUTO_ANALY) {
 				//生成金标数据
 				ReportProcessJB jbReport = new ReportProcessJB();
-//				jbReport.generateData();
-				CreatFile.creatJgbsFile(null);
+				jbReport.generateData();
 			}
 		} catch (Exception e) {
 			ExceptionUtil.throwCommonException(workdate + "生成金标数据：" + e.getMessage());

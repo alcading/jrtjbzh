@@ -20,12 +20,12 @@ public class ReportProcessJB {
 	public void generateData() throws Exception {
 		
 		Date tbsDay = DateUtil.getTbsDay();
-		//判断业务日期是否是每月月末,为是，开始金标批量
+		//判断业务日期是否是每月月末,若是,开始金标批量
 		Date monLastDate = DateUtil.getLastDate(tbsDay);
-		String monLastDate1 = DataFormat.dateToString(monLastDate);
-		String monthEndDate = DataFormat.dateToString(tbsDay);
+		String monLastDate1 = DataFormat.dateToNumber(monLastDate);
+		String monthEndDate = DataFormat.dateToNumber(tbsDay);
 		if(monLastDate1.equals(monthEndDate)){
-			String monthStartDate = DataFormat.dateToString(DateUtil.getFirstDate(tbsDay));
+			String monthStartDate = DataFormat.dateToNumber(DateUtil.getFirstDate(tbsDay));
 			jbDao = new JBDao();
 			cleanData(monthEndDate);
 			

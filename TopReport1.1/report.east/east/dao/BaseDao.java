@@ -198,11 +198,10 @@ public class BaseDao {
 	}
 	
     public static int queryAndWriteJBFile(String tableName, String sjrq, Map<String, String> sqlMap, Map<String, List<String>> tableInfoMap, 
-    		BufferedWriter bw, DefautValueVO defautValue) throws Exception{
+    		BufferedWriter bw) throws Exception{
     	int ret = 0;
     	int count = 0;
 		Connection conn = DBUtil.getConnection();
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 		StringBuilder line = null;
@@ -221,7 +220,7 @@ public class BaseDao {
 				throw new Exception("tableName:["+tableName + "] not exist!");
 			}
 			pstmt = conn.prepareStatement(sqlMap.get(tableName));
-			pstmt.setDate(1, (java.sql.Date) DataFormat.ConvertDate(sjrq));
+			pstmt.setDate(1, (java.sql.Date) DataFormat.ConvertDate1(sjrq));
 			rs = pstmt.executeQuery();
 			ResultSetMetaData rsmd = rs.getMetaData();
 			count = rsmd.getColumnCount();
@@ -253,7 +252,7 @@ public class BaseDao {
 							if(fieldType.startsWith("TIMESTAMP")) {
 								fieldValue = ToolUtils.formatTimestamp(fieldValue);
 							}else if(fieldType.startsWith("DATE")){
-								fieldValue = ToolUtils.formatDate(fieldValue);
+								fieldValue = ToolUtils.formatDate1(fieldValue);
 							}
 							try {
 								if(null!=fieldValue&&!"".equals(fieldValue)){
@@ -340,6 +339,28 @@ public class BaseDao {
 		}
 		return map;
 		
+	}
+	
+	public static String getJBBankCode() throws Exception{
+
+		Connection conn = DBUtil.getConnection();
+		Statement stmt = null;
+		ResultSet rs = null;
+		String bankReport_bankCode = "";
+		try {
+			stmt = conn.createStatement();
+			StringBuffer query = new StringBuffer();
+			query.append("select jbcode from BRNO_JBCD_LINK where brlevel = '1' ");
+			rs = stmt.executeQuery(query.toString());
+			while(rs.next()){
+				bankReport_bankCode = rs.getString("jbcode");
+			}
+			return bankReport_bankCode;
+		} catch (SQLException e) {
+			throw new Exception("获取总行金融机构编码出错！===" + e.getMessage(), e);
+		} finally{
+			DBUtil.close(conn, stmt, rs);
+		}
 	}
 	
 	/**
@@ -446,7 +467,7 @@ public class BaseDao {
 						||"0930".equals(tbsdy.substring(4)) || "1231".equals(tbsdy.substring(4))){
 					retFlag = true;
 				}	
-			}else if("M".equals(retType)){
+			}else if("M".equals(retType) || "J".equals(retType)){
 				//shaomy
 				c.setTime(dt); 
 				c.set(Calendar.DATE, (c.get(Calendar.DATE) + 1));
@@ -464,8 +485,8 @@ public class BaseDao {
 				retFlag = true;
 				
 			}else{
-				System.out.println("field_table配置错误：表["+tableName+"]对应的类型["+retType+"]配置错误！只能为：Y、Q、M、W、D三者之一。");
-				throw new CommonException("field_table配置错误：表["+tableName+"]对应的类型["+retType+"]配置错误！只能为：Y、Q、M、W、D三者之一。");
+				System.out.println("field_table配置错误：表["+tableName+"]对应的类型["+retType+"]配置错误！只能为：Y、Q、M、W、D、J之一。");
+				throw new CommonException("field_table配置错误：表["+tableName+"]对应的类型["+retType+"]配置错误！只能为：Y、Q、M、W、D、J之一。");
 			}
 		}
 		retMap.put("retType", retType);
