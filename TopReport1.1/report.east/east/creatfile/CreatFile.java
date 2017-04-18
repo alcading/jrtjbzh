@@ -12,9 +12,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.huateng.ebank.framework.report.common.ReportConstant;
 import com.huateng.ebank.framework.util.DateUtil;
 import com.huateng.report.imports.batch.ReportProcessJB;
 import com.huateng.report.imports.common.Constants;
+import com.huateng.report.utils.PackZipUtil;
 import com.huateng.report.utils.ReportUtils;
 
 import east.dao.BaseDao;
@@ -75,7 +77,7 @@ public class CreatFile {
 		//生成金标文件路径加年月日路径
 		String jbFilePath = ReportUtils.getSysParamsValue(Constants.PARAM_DIR,
 				Constants.PARAM_DIR_0104, "");
-//		String jbFilePath = "C:\\Project\\EAST";
+//		String jbFilePath = "C:\\Project\\EAST"; 本地测试
 		jbFilePath = jbFilePath + File.separator + args[0].substring(0, 6) + File.separator;
 		File jbPath = new File(jbFilePath);
 		if(!jbPath.exists()){
@@ -297,19 +299,11 @@ public class CreatFile {
 		int count = BaseDao.queryAndWriteJBFile(tableName, workdate, sqlMap, tableInfoMap, bw);
 	
 		bw.close();
-		//log文件
-		BufferedWriter flagFileWriter = new BufferedWriter(new FileWriter(fileName + ".log"));
-		flagFileWriter.write(datFile.getName() + "\n" );
-		flagFileWriter.write(datFile.length() + "\n" );
-		Calendar calendar=Calendar.getInstance();
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		flagFileWriter.write(sdf.format(calendar.getTime())+"\n");
-		flagFileWriter.write("Y".trim());
-		flagFileWriter.close();
-
+		
+		PackZipUtil zipUtil = new PackZipUtil();
+		String zipFileName = fileName + ReportConstant.DOWN_LOAD_PACK_ZIP_EXT;
+		zipUtil.zip(zipFileName, datFile);
 		System.out.println(tableName + "file***over,sum:"+ count +"！");
-		//end=System.currentTimeMillis();
-		//System.out.println("end===time(s):["+(end-start)/1000+"]!");
 	}
 	
 	public static void generateJBData() throws Exception {
