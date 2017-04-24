@@ -857,7 +857,7 @@ public class JBDao {
 			query.append("when b.qysyzxz='13' then 'B02' when b.qysyzxz='14' then 'A01' when b.qysyzxz='15' then 'A01' else  'B01' end, ");
 			query.append("case when b.qygm='0' then 'CS01' when b.qygm='1' then 'CS01' when b.qygm='2' then 'CS02' when b.qygm='3' then 'CS03' when b.qygm='4' then 'CS04' else 'CS04' end, ");
 			query.append("trim(d.duebillno), case when b.dklb='1' then 'F022' else 'F05' end, ");
-			query.append("b.hy2, to_date(b.dksq,'yyyymmdd'), to_date(b.dkzq,'yyyymmdd'), to_date(d.extensiondate,'yyyymmdd'), 'CNY', ''||round(b.dkye,2)||'', case  when b.fdb is null then 'RF01' else 'RF02' end, ");
+			query.append("substr(b.hy2,1,3), to_date(b.dksq,'yyyymmdd'), to_date(b.dkzq,'yyyymmdd'), to_date(d.extensiondate,'yyyymmdd'), 'CNY', ''||round(b.dkye,2)||'', case  when b.fdb is null then 'RF01' else 'RF02' end, ");
 			query.append("''||round(b.dkll,5)||'', case when b.dbfs='22' then 'B99' when b.dbfs='23' then 'A' when b.dbfs='100' then 'D' when b.dbfs='210' then 'C99' else 'Z' end, ");
 			query.append("case when b.dkfl4='11' then 'FQ01' when b.dkfl4='21' then 'FQ02' when b.dkfl4='30' then 'FQ03' when b.dkfl4='40' then 'FQ04' else 'FQ05' end, ");
 			query.append("case when b.zqbz='1' then 'FS02' when b.dkfl3 in('2','3','4') then 'FS03' else 'FS01' end ");
@@ -894,7 +894,7 @@ public class JBDao {
 			query.append("when b.qysyzxz='9' then 'B03' when b.qysyzxz='10' then 'B03' when b.qysyzxz='11' then 'B03' when b.qysyzxz='12' then 'B02' ");	  
 			query.append("when b.qysyzxz='13' then 'B02' when b.qysyzxz='14' then 'A01' when b.qysyzxz='15' then 'A01' else  'B01' end, ");
 			query.append("case when b.qygm='0' then 'CS01' when b.qygm='1' then 'CS01' when b.qygm='2' then 'CS02' when b.qygm='3' then 'CS03' when b.qygm='4' then 'CS04' else 'CS04' end, ");
-			query.append("trim(d.duebillno), case when b.dklb='1' then 'F022' else 'F05' end, b.hy2, to_date(b.dksq,'yyyymmdd'), to_date(b.dkzq,'yyyymmdd'), ");
+			query.append("trim(d.duebillno), case when b.dklb='1' then 'F022' else 'F05' end, substr(b.hy2,1,3), to_date(b.dksq,'yyyymmdd'), to_date(b.dkzq,'yyyymmdd'), ");
 			query.append("case when acc.opbriefcode='022' then to_date(acc.lastupdatedate,'yyyymmdd') when acc.opbriefcode='322' then to_date(acc.lastupdatedate,'yyyymmdd') else to_date(d.realmaturedate,'yyyymmdd') end, ");
 			query.append("'CNY', ''||round(acc.occursum,2)||'', case when b.fdb is null then 'RF01' else 'RF02' end, ''||round(b.dkll,5)||'', ");
 			query.append("case when b.dbfs='22' then 'B99' when b.dbfs='23' then 'A' when b.dbfs='100' then 'D' when b.dbfs='210' then 'C99' else 'Z' end, 'FS01', ");
