@@ -45,6 +45,19 @@ public class JBDao {
 			StringBuffer query = new StringBuffer();
 			query.append("insert into DEPB( ");
 			//活期对公
+			//单位活期存款汇总报送
+			query.append("select sjrq,JRJGBM,KHLX,CKZHDM,CKXYDM,CPLB,CKXYQSRQ,CKXYDQRQ,CKBZ,sum(CKYE),LLSFGD,LLSP from ( ");
+			query.append("select to_date('"+ monthEndDate+"','yyyymmdd') as sjrq,case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end as JRJGBM,case when hq.kmdh ='210110' then '1' else '0' end as KHLX,null as CKZHDM,null as CKXYDM, ");
+			query.append("case when lb.ckcplb is not null then lb.ckcplb else 'D01' end as CPLB,null as CKXYQSRQ,null as CKXYDQRQ,'CNY' as CKBZ, ");
+			query.append("hq.zhye as CKYE,'RF02' as LLSFGD, case when hq.fdll >0 then hq.fdll else llb.ll end as LLSP ");		
+			query.append("from hqdgzwj hq ");		
+			query.append("left join brno_jbcd_link li on hq.dqdh||jgdh = li.brno ");
+			query.append("left join ckcplb lb on hq.kmdh = lb.kmdh ");
+			query.append("left join f_temp_llb llb on hq.lldh = llb.lldh ");
+			query.append("where hq.jlzt not in ('0','2') and hq.xdcked = 0 and hq.kmdh in ('210101','210110') and hq.zhye > 0 ");
+			query.append(") group by sjrq,JRJGBM,KHLX,CKZHDM,CKXYDM,CPLB,CKXYQSRQ,CKXYDQRQ,CKBZ,LLSFGD,LLSP ");
+			query.append("union all ");
+			//其他对公活期存款汇
 			query.append("select to_date('"+ monthEndDate+"','yyyymmdd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,'0',hq.zhdh,hq.zhdh, ");
 			query.append("case when lb.ckcplb is not null then lb.ckcplb else 'D01' end ,null,null,'CNY', ");
 			query.append("hq.zhye,'RF02', case when hq.fdll >0 then hq.fdll else llb.ll end ");		
@@ -52,7 +65,7 @@ public class JBDao {
 			query.append("left join brno_jbcd_link li on hq.dqdh||jgdh = li.brno ");
 			query.append("left join ckcplb lb on hq.kmdh = lb.kmdh ");
 			query.append("left join f_temp_llb llb on hq.lldh = llb.lldh ");
-			query.append("where hq.jlzt not in ('0','2') and hq.xdcked = 0 and hq.zhye > 0 ");
+			query.append("where hq.jlzt not in ('0','2') and hq.xdcked = 0 and hq.kmdh not in ('210101','210110') and hq.zhye > 0 ");
 			query.append("union all ");
 			//--对公协定存款
 			query.append("select to_date('"+ monthEndDate+"','yyyymmdd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,'0',hq.zhdh,hq.zhdh,'D051', ");		
@@ -83,25 +96,48 @@ public class JBDao {
 			query.append("and hq.xdcked > 0 and hq.zhye > 0 and hq.xdcked < hq.zhye ");
 			query.append("union all ");
 			//对私活期
+			//活期储蓄存款汇总报送
+			query.append("select sjrq,JRJGBM,KHLX,CKZHDM,CKXYDM,CPLB,CKXYQSRQ,CKXYDQRQ,CKBZ,sum(CKYE),LLSFGD,LLSP from ( ");
+			query.append("select to_date('"+ monthEndDate+"','yyyymmdd') as sjrq,case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end as JRJGBM,'1' as KHLX,null as CKZHDM,null as CKXYDM,case when lb.ckcplb is not null then lb.ckcplb else 'D01' end as CPLB, ");
+			query.append("null as CKXYQSRQ,null as CKXYDQRQ,'CNY' as CKBZ,hq.zhye as CKYE,'RF02' as LLSFGD, case when hq.fdll >0 then hq.fdll else llb.ll end as LLSP ");
+			query.append("from dshqzwj hq ");
+			query.append("left join brno_jbcd_link li on hq.dqdh||jgdh = li.brno ");
+			query.append("left join ckcplb lb on hq.kmdh = lb.kmdh ");
+			query.append("left join f_temp_llb llb on hq.lldh = llb.lldh ");
+			query.append("where hq.jlzt not in ('0','2') and hq.kmdh = '211110' and hq.zhye > 0 ");
+			query.append(") group by sjrq,JRJGBM,KHLX,CKZHDM,CKXYDM,CPLB,CKXYQSRQ,CKXYDQRQ,CKBZ,LLSFGD,LLSP ");
+			query.append("union all ");
+			//其他活期存款
 			query.append("select to_date('"+ monthEndDate+"','yyyymmdd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,'1',hq.zhdh,hq.zhdh,case when lb.ckcplb is not null then lb.ckcplb else 'D01' end, ");
 			query.append("null,null,'CNY',hq.zhye,'RF02', case when hq.fdll >0 then hq.fdll else llb.ll end ");
 			query.append("from dshqzwj hq ");
 			query.append("left join brno_jbcd_link li on hq.dqdh||jgdh = li.brno ");
 			query.append("left join ckcplb lb on hq.kmdh = lb.kmdh ");
 			query.append("left join f_temp_llb llb on hq.lldh = llb.lldh ");
-			query.append("where hq.jlzt not in ('0','2') and hq.zhye > 0 ");
+			query.append("where hq.jlzt not in ('0','2') and hq.kmdh <> '211110' and hq.zhye > 0 ");
 			query.append("union all ");
 			//定期
 			query.append("select to_date('"+ monthEndDate+"','yyyy-mm-dd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,case when dq.ywdh='002' then '0' else '1' end, ");
 			query.append("dq.zhdh,dq.zhdh,case when lb.ckcplb is not null then lb.ckcplb else 'D01' end, ");
-			query.append("to_date(dq.qxrq,'yyyymmdd'), case when dq.dqrq > dq.qxrq then to_date(dq.dqrq,'yyyymmdd') else null end,'CNY',dq.zhye, ");
-			query.append("case when dq.fdll >0 then 'RF02' else 'RF01' end, case when dq.fdll >0 then dq.fdll when dq.kmdh='211130' then null else llb.ll end ");
+			query.append("to_date(dq.qxrq,'yyyymmdd'), case when dq.dqrq > dq.qxrq then to_date(dq.dqrq,'yyyymmdd') when dq.kmdh='211130' then null else null end,'CNY',dq.zhye, ");
+			query.append("case when dq.kmdh='210701' then 'RF02' else 'RF01' end, case when dq.fdll >0 then dq.fdll when dq.kmdh='211130' then null else llb.ll end ");
 			query.append("from dqzwj dq ");
 			query.append("left join brno_jbcd_link li on dq.dqdh||dq.jgdh = li.brno ");
 			query.append("left join ckcplb lb on dq.kmdh = lb.kmdh ");
 			query.append("left join f_temp_llb llb on dq.lldh = llb.lldh ");
-			query.append("where dq.jlzt not in ('0','2') and dq.zhye > 0 ) ");
-					    
+			query.append("where dq.jlzt not in ('0','2') and dq.kmdh not in ('211280','210701') and dq.zhye > 0 ");
+			query.append("union all ");
+			//通知存款
+			query.append("select to_date('"+ monthEndDate+"','yyyy-mm-dd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,case when dq.ywdh='002' then '0' else '1' end, ");
+			query.append("dq.zhdh,dq.zhdh,case when lb.ckcplb is not null then lb.ckcplb else 'D01' end, ");
+			query.append("to_date(dq.qxrq,'yyyymmdd'), case when dq.ckqx='D01' then to_date('19990101','yyyymmdd') when dq.ckqx='D07' then to_date('19990107','yyyymmdd') else null end,'CNY',dq.zhye, ");
+			query.append("'RF01', case when dq.fdll >0 then dq.fdll else llb.ll end ");
+			query.append("from dqzwj dq ");
+			query.append("left join brno_jbcd_link li on dq.dqdh||dq.jgdh = li.brno ");
+			query.append("left join ckcplb lb on dq.kmdh = lb.kmdh ");
+			query.append("left join f_temp_llb llb on dq.lldh = llb.lldh ");
+			query.append("where dq.jlzt not in ('0','2') and dq.kmdh in ('211280','210701') and dq.zhye > 0 ) ");
+			
 			stmt.execute(query.toString());
 			conn.commit();
 		} catch (SQLException e) {
@@ -289,8 +325,8 @@ public class JBDao {
 					ps_mortagageinfo.setString(1, cocontractno);
 					rs_mortagageinfo = ps_mortagageinfo.executeQuery();
 					if (rs_mortagageinfo.next()) {
-						if ("1".equals(rs_mortagageinfo.getString("mort_type")
-								.trim())) {
+						if ("1".equals(rs_mortagageinfo.getString("mort_type").trim()) || "2".equals(rs_mortagageinfo.getString("mort_type").trim())
+								|| "3".equals(rs_mortagageinfo.getString("mort_type").trim())) {
 							guattype = "B01"; // 房地产抵押贷款
 						} else {
 							guattype = "B99"; // 其它抵押贷款
@@ -364,6 +400,9 @@ public class JBDao {
 					//add by weigang.lv 为空的默认给消费类型
 					if(DataFormat.isEmpty(lnid)){
 						lnid="F0219";
+					}
+					if(lntype.equals("001") || lntype.equals("050")){
+						lnid = "F99";
 					}
 					
 					ps_insertData.setDate(1, (java.sql.Date) DataFormat.ConvertDate1(last_upd_date));
@@ -618,8 +657,8 @@ public class JBDao {
 					ps_mortagageinfo.setString(1, cocontractno);
 					rs_mortagageinfo = ps_mortagageinfo.executeQuery();
 					if (rs_mortagageinfo.next()) {
-						if ("1".equals(rs_mortagageinfo.getString("mort_type")
-								.trim())) {
+						if ("1".equals(rs_mortagageinfo.getString("mort_type").trim()) || "2".equals(rs_mortagageinfo.getString("mort_type").trim())
+								|| "3".equals(rs_mortagageinfo.getString("mort_type").trim())) {
 							guattype = "B01"; // 房地产抵押贷款
 						} else {
 							guattype = "B99"; // 其它抵押贷款
@@ -737,6 +776,9 @@ public class JBDao {
 				if(DataFormat.isEmpty(lnid)){
 					lnid="F0219";
 				}
+				if(lntype.equals("001") || lntype.equals("050")){
+					lnid = "F99";
+				}
 				//数据入库
 				if (!DataFormat.isEmpty(contractno) && accountAmount != 0) {
 					
@@ -850,19 +892,19 @@ public class JBDao {
 			StringBuffer query = new StringBuffer();
 			query.append("insert into LOAB(select to_date(b.bbrq,'yyyymmdd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end, ");
 			query.append("case when l.cuskind='1' then '0' when l.cuskind='2' then '1' end, ");
-			query.append("substr(b.qydm,0,8)||substr(b.qydm,10,10),upper(b.hy1),case when b.zjlx ='5' then substr(b.zjhm,3,6) else substr(b.zjhm,1,6) end, ");
-			query.append("case when b.qysyzxz='1' then 'A01' when b.qysyzxz='2' then 'A01' when b.qysyzxz='3' then 'A02' when b.qysyzxz='4' then 'A02' ");		
+			query.append("substr(b.qydm,0,8)||substr(b.qydm,10,10),upper(b.hy1),case when length(b.zjhm) = 18 then substr(b.zjhm,3,6) else substr(b.zjhm,1,6) end, ");
+			query.append("case when b.org_level2 is not null then b.org_level2 when b.qysyzxz='1' then 'A01' when b.qysyzxz='2' then 'A01' when b.qysyzxz='3' then 'A02' when b.qysyzxz='4' then 'A02' ");		
 			query.append("when b.qysyzxz='5' then 'A02' when b.qysyzxz='6' then 'A02' when b.qysyzxz='7' then 'B01' when b.qysyzxz='8' then 'B01' ");		
 			query.append("when b.qysyzxz='9' then 'B03' when b.qysyzxz='10' then 'B03' when b.qysyzxz='11' then 'B03' when b.qysyzxz='12' then 'B02' ");	  
 			query.append("when b.qysyzxz='13' then 'B02' when b.qysyzxz='14' then 'A01' when b.qysyzxz='15' then 'A01' else  'B01' end, ");
-			query.append("case when b.qygm='0' then 'CS01' when b.qygm='1' then 'CS01' when b.qygm='2' then 'CS02' when b.qygm='3' then 'CS03' when b.qygm='4' then 'CS04' else 'CS04' end, ");
-			query.append("trim(d.duebillno), case when b.dklb='1' then 'F022' else 'F05' end, ");
-			query.append("substr(b.hy2,1,3), to_date(b.dksq,'yyyymmdd'), to_date(b.dkzq,'yyyymmdd'), to_date(d.extensiondate,'yyyymmdd'), 'CNY', ''||round(b.dkye,2)||'', case  when b.fdb is null then 'RF01' else 'RF02' end, ");
-			query.append("''||round(b.dkll,5)||'', case when b.dbfs='22' then 'B99' when b.dbfs='23' then 'A' when b.dbfs='100' then 'D' when b.dbfs='210' then 'C99' else 'Z' end, ");
+			query.append("case when b.qygm='0' then 'CS01' when b.qygm='1' then 'CS01' when b.qygm='2' then 'CS02' when b.qygm='3' then 'CS03' when b.qygm='5' then 'CS04' else 'CS04' end, ");
+			query.append("trim(d.duebillno), case when dklx＝'1' then 'F022' when dklx＝'2' then 'F023' when b.dklb='1' then 'F022' when b.dklb＝'37' then 'F99' else 'F05' end, ");
+			query.append("upper(substr(nvl(b.dktx2,b.hy2),1,3)), to_date(b.dksq,'yyyymmdd'), to_date(b.dkzq,'yyyymmdd'), to_date(d.extensiondate,'yyyymmdd'), 'CNY', ''||round(b.dkye,2)||'', case  when b.fdb is null or b.fdb＝0 then 'RF01' else 'RF02' end, ");
+			query.append("''||round(b.dkll,5)||'', case when s.assettype is not null then s.assettype when b.dbfs='23' then 'A' when b.dbfs='100' then 'D' when b.dbfs='210' then 'C99' else 'Z' end, ");
 			query.append("case when b.dkfl4='11' then 'FQ01' when b.dkfl4='21' then 'FQ02' when b.dkfl4='30' then 'FQ03' when b.dkfl4='40' then 'FQ04' else 'FQ05' end, ");
 			query.append("case when b.zqbz='1' then 'FS02' when b.dkfl3 in('2','3','4') then 'FS03' else 'FS01' end ");
-			query.append("from loan l,loanduebill d,b101 b,ind_levelcatalog ind,BRNO_JBCD_LINK li ");
-			query.append("where l.ContractNo=b.dkht and l.appid=d.appid and b.hy1=ind.ind_levelcode and b.bmhh = li.bmhh and ");
+			query.append("from loan l,loanduebill d left join (select appid,assettype,row_number()over(partition by appid order by assettype) as num from(select distinct s.appid,case when s.assettype in('220101','220102','220103','220104','2206','2205') then 'B01' else 'B99' end as assettype from security s where s.securitykind='22')) s on s.appid=d.appid and s.num=1,b101 b left join BRNO_JBCD_LINK li on b.bmhh = li.bmhh,ind_levelcatalog ind,dkhzwj dk ");
+			query.append("where l.ContractNo=b.dkht and l.appid=d.appid and b.hy1=ind.ind_levelcode and d.dueBillNo=dk.jjh and dk.dkxz not in('8','Q','W') and ");
 			query.append("b.dkye !='0.00'  and b.bbrq = ? ) ");
 			
 			stmt = conn.prepareStatement(query.toString());
@@ -888,19 +930,19 @@ public class JBDao {
 			StringBuffer query = new StringBuffer();
 			query.append("insert into LOAF(select to_date(b.bbrq,'yyyymmdd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end, ");
 			query.append("case when l.cuskind='1' then '0' when l.cuskind='2' then '1' end, ");
-			query.append("substr(b.qydm,0,8)||substr(b.qydm,10,10),upper(b.hy1),case when b.zjlx ='5' then substr(b.zjhm,3,6) else substr(b.zjhm,1,6) end, ");
-			query.append("case when b.qysyzxz='1' then 'A01' when b.qysyzxz='2' then 'A01' when b.qysyzxz='3' then 'A02' when b.qysyzxz='4' then 'A02' ");		
+			query.append("substr(b.qydm,0,8)||substr(b.qydm,10,10),upper(b.hy1),case when length(b.zjhm) = 18 then substr(b.zjhm,3,6) else substr(b.zjhm,1,6) end, ");
+			query.append("case when b.org_level2 is not null then b.org_level2 when b.qysyzxz='1' then 'A01' when b.qysyzxz='2' then 'A01' when b.qysyzxz='3' then 'A02' when b.qysyzxz='4' then 'A02' ");		
 			query.append("when b.qysyzxz='5' then 'A02' when b.qysyzxz='6' then 'A02' when b.qysyzxz='7' then 'B01' when b.qysyzxz='8' then 'B01' ");		
 			query.append("when b.qysyzxz='9' then 'B03' when b.qysyzxz='10' then 'B03' when b.qysyzxz='11' then 'B03' when b.qysyzxz='12' then 'B02' ");	  
 			query.append("when b.qysyzxz='13' then 'B02' when b.qysyzxz='14' then 'A01' when b.qysyzxz='15' then 'A01' else  'B01' end, ");
-			query.append("case when b.qygm='0' then 'CS01' when b.qygm='1' then 'CS01' when b.qygm='2' then 'CS02' when b.qygm='3' then 'CS03' when b.qygm='4' then 'CS04' else 'CS04' end, ");
-			query.append("trim(d.duebillno), case when b.dklb='1' then 'F022' else 'F05' end, substr(b.hy2,1,3), to_date(b.dksq,'yyyymmdd'), to_date(b.dkzq,'yyyymmdd'), ");
+			query.append("case when b.qygm='0' then 'CS01' when b.qygm='1' then 'CS01' when b.qygm='2' then 'CS02' when b.qygm='3' then 'CS03' when b.qygm='5' then 'CS04' else 'CS04' end, ");
+			query.append("trim(d.duebillno), case when dklx＝'1' then 'F022' when dklx＝'2' then 'F023' when b.dklb='1' then 'F022' when b.dklb＝'37' then 'F99' else 'F05' end, upper(substr(nvl(b.dktx2,b.hy2),1,3)), to_date(b.dksq,'yyyymmdd'), to_date(b.dkzq,'yyyymmdd'), ");
 			query.append("case when acc.opbriefcode='022' then to_date(acc.lastupdatedate,'yyyymmdd') when acc.opbriefcode='322' then to_date(acc.lastupdatedate,'yyyymmdd') else to_date(d.realmaturedate,'yyyymmdd') end, ");
-			query.append("'CNY', ''||round(acc.occursum,2)||'', case when b.fdb is null then 'RF01' else 'RF02' end, ''||round(b.dkll,5)||'', ");
-			query.append("case when b.dbfs='22' then 'B99' when b.dbfs='23' then 'A' when b.dbfs='100' then 'D' when b.dbfs='210' then 'C99' else 'Z' end, 'FS01', ");
+			query.append("'CNY', ''||round(acc.occursum,2)||'', case when dk.jxbz='1' then  'RF01' else 'RF02' end, ''||round(b.dkll,5)||'', ");
+			query.append("case when s.assettype is not null then s.assettype when b.dbfs='23' then 'A' when b.dbfs='100' then 'D' when b.dbfs='210' then 'C99' else 'Z' end, 'FS01', ");
 			query.append("case when acc.creditdebitflag='1' then '1' else '0' end ");
-			query.append("from loan l,loanduebill d,b101 b,accountentry acc,BRNO_JBCD_LINK li ");
-			query.append("where l.ContractNo=b.dkht and l.appid=d.appid and  l.appid=acc.appid and b.bmhh = li.bmhh and ");
+			query.append("from loan l,loanduebill d left join (select appid,assettype,row_number()over(partition by appid order by assettype) as num from(select distinct s.appid,case when s.assettype in('220101','220102','220103','220104','2206','2205') then 'B01' else 'B99' end as assettype from security s where s.securitykind='22')) s on s.appid=d.appid and s.num=1,b101 b left join BRNO_JBCD_LINK li on b.bmhh = li.bmhh,accountentry acc,dkhzwj dk ");
+			query.append("where l.ContractNo=b.dkht and l.appid=d.appid and l.appid=acc.appid and d.dueBillNo=dk.jjh and dk.dkxz not in('8','Q','W') and ");
 			query.append("acc.occurdate between ? and ? and b.bbrq = ? and acc.opflag='1' )");
 			
 			stmt = conn.prepareStatement(query.toString());
