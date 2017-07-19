@@ -95,6 +95,9 @@ public class BaseDao {
 		String[] temAry = null;
 		//	value	byte[] 定长,value  String非定长
 		String value = null;
+		
+		byte  b2[] = {0x01};
+		String str2 = new String(b2);
 		try {
 			if(sqlMap.get(tableName)==null || "".equals(sqlMap.get(tableName).trim())) {
 				throw new Exception("tableName:["+tableName + "] not exist!");
@@ -170,7 +173,7 @@ public class BaseDao {
 									fieldValue=fieldValue.replaceAll(",", "-");
 								}
 							//非定长用逗号分割
-								value=ToolUtils.formatString(fieldType, fieldValue, Integer.parseInt(fieldLength),specflag,Integer.parseInt(fieldLength2),Integer.parseInt(fieldSetFlag),",");
+								value=ToolUtils.formatString(tableName,fieldName,fieldType, fieldValue, Integer.parseInt(fieldLength),specflag,Integer.parseInt(fieldLength2),Integer.parseInt(fieldSetFlag),str2);
 							} catch (Exception e) {
 								break;
 							}
@@ -179,7 +182,7 @@ public class BaseDao {
 							line.append(value);
 						}
 						//非定长需要长度减1
-						line.deleteCharAt(line.length()-1);
+						//line.deleteCharAt(line.length()-1);
 						bw.write(line + "\n");
 						bw.flush();
 					}
@@ -259,7 +262,7 @@ public class BaseDao {
 									fieldValue=fieldValue.replaceAll(",", "-");
 								}
 								//非定长用竖线分割
-								value=ToolUtils.formatString(fieldType, fieldValue, Integer.parseInt(fieldLength),specflag,Integer.parseInt(fieldLength2),Integer.parseInt(fieldSetFlag),"|");
+								value=ToolUtils.formatString(tableName,fieldName,fieldType, fieldValue, Integer.parseInt(fieldLength),specflag,Integer.parseInt(fieldLength2),Integer.parseInt(fieldSetFlag),"|");
 							} catch (Exception e) {
 								break;
 							}

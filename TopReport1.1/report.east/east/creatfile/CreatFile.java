@@ -3,7 +3,12 @@ package east.creatfile;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.IOException;
+import java.io.LineNumberReader;
+import java.io.OutputStreamWriter;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -19,13 +24,15 @@ import com.huateng.report.imports.common.Constants;
 import com.huateng.report.utils.PackZipUtil;
 import com.huateng.report.utils.ReportUtils;
 
+import resource.bean.pub.Bctl;
+
+import resource.report.dao.ROOTDAOUtils;
+
 import east.dao.BaseDao;
 import east.special.product.UpdateAndQuery;
 import east.utils.tools.ToolUtils;
 import east.utils.tools.XmlUtil;
 import east.vo.DefautValueVO;
-import resource.bean.pub.Bctl;
-import resource.report.dao.ROOTDAOUtils;
 
 
 /**
@@ -46,13 +53,13 @@ public class CreatFile {
 		DefautValueVO defautValue = ToolUtils.defautValue();
 		UpdateAndQuery updateandquery = new UpdateAndQuery();
 		//对方账户处理
-		updateandquery.updateDfzh();
+		//updateandquery.updateDfzh();
 		//工号处理
-		updateandquery.updateGh();
+		//updateandquery.updateGh();
 		//隐藏不报数据处理
-		updateandquery.shieldData();
+		//updateandquery.shieldData();
 		// 274利率代号处理
-		updateandquery.updateDqzwjLldh();
+		//updateandquery.updateDqzwjLldh();
 		XmlUtil x = new XmlUtil();
 		Map<String, List<String>> tableInfoMap = BaseDao.queryFieldInfo();
 		//读取sql.xml中sql
@@ -77,7 +84,7 @@ public class CreatFile {
 		//生成金标文件路径加年月日路径
 		String jbFilePath = ReportUtils.getSysParamsValue(Constants.PARAM_DIR,
 				Constants.PARAM_DIR_0104, "");
-//		String jbFilePath = "C:\\Project\\EAST"; 本地测试
+//		String jbFilePath = "C:\\Project\\EAST"; //本地测试
 		jbFilePath = jbFilePath + File.separator + args[0].substring(0, 6) + File.separator;
 		File jbPath = new File(jbFilePath);
 		if(!jbPath.exists()){
@@ -98,6 +105,7 @@ public class CreatFile {
 		Set<String> monthSet = new HashSet<String>();
 		Set<String> quarterSet = new HashSet<String>();
 		Set<String> yearSet = new HashSet<String>();
+		Set<String> cSet = new HashSet<String>();
 		Set<String> jbSet = new HashSet<String>();
 		for (String tableName : tableInfoMap.keySet()) {
 			//start=System.currentTimeMillis();
@@ -147,8 +155,9 @@ public class CreatFile {
 			}catch(Exception e) {
 				System.err.println(e.getMessage());
 				continue;
-			}		
+			}			
 		}
+		
 		//备份cpwj到cpwj_bak
 		//BaseDao.delCpwjOrBak("cpwj_bak");
 		//BaseDao.backupCpwj();
@@ -251,8 +260,6 @@ public class CreatFile {
 			}		
 		}
 		
-		
-				
 		//还原cpwj_bak到cpwj
 		//BaseDao.delCpwjOrBak("cpwj");
 		//BaseDao.revertCpwj();
@@ -267,18 +274,22 @@ public class CreatFile {
 		fileName = filePath + bctl.getFinanceCode().trim()+"-" + tableName + "-" + ToolUtils.formatDate(workdate);
 		File txtFile = new File(fileName + ".txt");
 		BufferedWriter bw = new BufferedWriter(new FileWriter(txtFile));
+		//BufferedWriter bw = new BufferedWriter (new OutputStreamWriter (new FileOutputStream (txtFile), "UTF-8"));
 		
 		int count = BaseDao.queryAndWriteFile(tableName, workdate, sqlMap, tableInfoMap, bw, defautValue);
-	
+		String counts=Integer.toString(count);
 		bw.close();
+        
 		//log文件
 		BufferedWriter flagFileWriter = new BufferedWriter(new FileWriter(fileName + ".log"));
+		//BufferedWriter flagFileWriter = new BufferedWriter (new OutputStreamWriter (new FileOutputStream (fileName + ".log"), "UTF-8"));
 		flagFileWriter.write(txtFile.getName() + "\n" );
 		flagFileWriter.write(txtFile.length() + "\n" );
 		Calendar calendar=Calendar.getInstance();
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		flagFileWriter.write(sdf.format(calendar.getTime())+"\n");
-		flagFileWriter.write("Y".trim());
+		flagFileWriter.write("Y".trim()+"\n");
+		flagFileWriter.write(counts);
 		flagFileWriter.close();
 
 		System.out.println(tableName + "file***over,sum:"+ count +"！");
@@ -345,22 +356,26 @@ public class CreatFile {
 			try {
 				File txtFile = new File(fileName + ".txt");
 				BufferedWriter bw = new BufferedWriter(new FileWriter(txtFile));
+				//BufferedWriter bw = new BufferedWriter (new OutputStreamWriter (new FileOutputStream (txtFile), "UTF-8"));
 				
 				//dataList = BaseDao.query(tableName, args[0], sqlMap);
 				
 				int count = BaseDao.queryAndWriteFile(tableName, workDate[0], sqlMap, tableInfoMap, bw, defautValue);
-			
+				String counts=Integer.toString(count);
 			
 				bw.close();
 				FileInputStream inputStream = new FileInputStream(txtFile);
+		        
 				//log文件
 				BufferedWriter flagFileWriter = new BufferedWriter(new FileWriter(fileName + ".log"));
+				//BufferedWriter flagFileWriter = new BufferedWriter (new OutputStreamWriter (new FileOutputStream (fileName + ".log"), "UTF-8"));
 				flagFileWriter.write(txtFile.getName() + "\n" );
 				flagFileWriter.write(txtFile.length() + "\n" );
 				Calendar calendar=Calendar.getInstance();
 				SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 				flagFileWriter.write(sdf.format(calendar.getTime())+"\n");
-				flagFileWriter.write("Y".trim());
+				flagFileWriter.write("Y".trim()+"\n");
+				flagFileWriter.write(counts);
 				flagFileWriter.close();
 	
 				System.out.println(tableName + "file***over,sum:"+ count +"！");
