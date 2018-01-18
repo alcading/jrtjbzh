@@ -146,7 +146,7 @@ public class JBDao {
 		} finally{
 			DBUtil.close(conn, stmt, null);
 		}
-		logger.info("....................处理存款余额信息begin.......................");
+		logger.info("....................处理存款余额信息end.......................");
 		
 	}
 	
@@ -899,12 +899,12 @@ public class JBDao {
 			query.append("when b.qysyzxz='13' then 'B02' when b.qysyzxz='14' then 'A01' when b.qysyzxz='15' then 'A01' else  'B01' end, ");
 			query.append("case when b.qygm='0' then 'CS01' when b.qygm='1' then 'CS01' when b.qygm='2' then 'CS02' when b.qygm='3' then 'CS03' when b.qygm='5' then 'CS04' else 'CS04' end, ");
 			query.append("trim(d.duebillno), case when dklx＝'1' then 'F022' when dklx＝'2' then 'F023' when b.dklb='1' then 'F022' when b.dklb＝'37' then 'F99' else 'F05' end, ");
-			query.append("upper(substr(nvl(b.dktx2,b.hy2),1,3)), to_date(b.dksq,'yyyymmdd'), to_date(b.dkzq,'yyyymmdd'), to_date(d.extensiondate,'yyyymmdd'), 'CNY', ''||round(b.dkye,2)||'', case  when b.fdb is null or b.fdb＝0 then 'RF01' else 'RF02' end, ");
+			query.append("upper(substr(nvl(b.dktx2,b.hy2),1,3)), to_date(b.dksq,'yyyymmdd'), to_date(b.dkzq,'yyyymmdd'), to_date(d.extensiondate,'yyyymmdd'), 'CNY', ''||round(d.dbrestsum,2)||'', case  when b.fdb is null or b.fdb＝0 then 'RF01' else 'RF02' end, ");
 			query.append("''||round(b.dkll,5)||'', case when s.assettype is not null then s.assettype when b.dbfs='23' then 'A' when b.dbfs='100' then 'D' when b.dbfs='210' then 'C99' else 'Z' end, ");
 			query.append("case when b.dkfl4='11' then 'FQ01' when b.dkfl4='21' then 'FQ02' when b.dkfl4='30' then 'FQ03' when b.dkfl4='40' then 'FQ04' else 'FQ05' end, ");
 			query.append("case when b.zqbz='1' then 'FS02' when b.dkfl3 in('2','3','4') then 'FS03' else 'FS01' end ");
 			query.append("from loan l,loanduebill d left join (select appid,assettype,row_number()over(partition by appid order by assettype) as num from(select distinct s.appid,case when s.assettype in('220101','220102','220103','220104','2206','2205') then 'B01' else 'B99' end as assettype from security s where s.securitykind='22')) s on s.appid=d.appid and s.num=1,b101 b left join BRNO_JBCD_LINK li on b.bmhh = li.bmhh,ind_levelcatalog ind,dkhzwj dk ");
-			query.append("where l.ContractNo=b.dkht and l.appid=d.appid and b.hy1=ind.ind_levelcode and d.dueBillNo=dk.jjh and dk.dkxz not in('8','Q','W') and ");
+			query.append("where l.ContractNo=b.dkht and l.appid=d.appid and b.hy1=ind.ind_levelcode and d.dueBillNo=dk.jjh and dk.dkxz not in('8','Q','W') and l.loantype='1'  and l.appopkind != 37 and ");
 			query.append("b.dkye !='0.00'  and b.bbrq = ? ) ");
 			
 			stmt = conn.prepareStatement(query.toString());
@@ -917,7 +917,7 @@ public class JBDao {
 		} finally{
 			DBUtil.close(conn, stmt, null);
 		}
-		logger.info("....................处理对公贷款余额信息begin.......................");
+		logger.info("....................处理对公贷款余额信息end.......................");
 	}
 
 	public void insertCLoanAccrual(String monthStartDate, String monthEndDate) throws Exception{
@@ -942,8 +942,8 @@ public class JBDao {
 			query.append("case when s.assettype is not null then s.assettype when b.dbfs='23' then 'A' when b.dbfs='100' then 'D' when b.dbfs='210' then 'C99' else 'Z' end, 'FS01', ");
 			query.append("case when acc.creditdebitflag='1' then '1' else '0' end ");
 			query.append("from loan l,loanduebill d left join (select appid,assettype,row_number()over(partition by appid order by assettype) as num from(select distinct s.appid,case when s.assettype in('220101','220102','220103','220104','2206','2205') then 'B01' else 'B99' end as assettype from security s where s.securitykind='22')) s on s.appid=d.appid and s.num=1,b101 b left join BRNO_JBCD_LINK li on b.bmhh = li.bmhh,accountentry acc,dkhzwj dk ");
-			query.append("where l.ContractNo=b.dkht and l.appid=d.appid and l.appid=acc.appid and d.dueBillNo=dk.jjh and dk.dkxz not in('8','Q','W') and ");
-			query.append("acc.occurdate between ? and ? and b.bbrq = ? and acc.opflag='1' )");
+			query.append("where l.ContractNo=b.dkht and l.appid=d.appid and l.appid=acc.appid and d.dueBillNo=dk.jjh and dk.dkxz not in('8','Q','W') and l.loantype='1'  and l.appopkind != 37 and ");
+			query.append("acc.occurdate between ? and ? and b.bbrq = ? and acc.duebillno = d.dueBillNo and acc.opflag='1' )");
 			
 			stmt = conn.prepareStatement(query.toString());
 			stmt.setString(1, monthStartDate);
