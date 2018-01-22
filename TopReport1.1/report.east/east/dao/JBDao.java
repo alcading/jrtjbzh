@@ -54,7 +54,7 @@ public class JBDao {
 			query.append("left join brno_jbcd_link li on hq.dqdh||jgdh = li.brno ");
 			query.append("left join ckcplb lb on hq.kmdh = lb.kmdh ");
 			query.append("left join f_temp_llb llb on hq.lldh = llb.lldh ");
-			query.append("where hq.jlzt not in ('0','2') and hq.xdcked = 0 and hq.kmdh in ('210101','210110') and hq.zhye > 0 ");
+			query.append("where hq.jlzt not in ('0','2') and hq.kmdh in ('210101','210110') and hq.zhye > 0 and hq.xdcked = 0 ");
 			query.append(") group by sjrq,JRJGBM,KHLX,CKZHDM,CKXYDM,CPLB,CKXYQSRQ,CKXYDQRQ,CKBZ,LLSFGD,LLSP ");
 			query.append("union all ");
 			//其他对公活期存款汇
@@ -65,7 +65,7 @@ public class JBDao {
 			query.append("left join brno_jbcd_link li on hq.dqdh||jgdh = li.brno ");
 			query.append("left join ckcplb lb on hq.kmdh = lb.kmdh ");
 			query.append("left join f_temp_llb llb on hq.lldh = llb.lldh ");
-			query.append("where hq.jlzt not in ('0','2') and hq.xdcked = 0 and hq.kmdh not in ('210101','210110') and hq.zhye > 0 ");
+			query.append("where hq.jlzt not in ('0','2') and substr(hq.kmdh,1,4) ='2126' and hq.zhye > 0 and hq.xdcked = 0 ");
 			query.append("union all ");
 			//--对公协定存款
 			query.append("select to_date('"+ monthEndDate+"','yyyymmdd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,'0',hq.zhdh,hq.zhdh,'D051', ");		
@@ -74,7 +74,7 @@ public class JBDao {
 			query.append("left join brno_jbcd_link li on hq.dqdh||jgdh = li.brno ");
 			query.append("left join ckcplb lb on hq.kmdh = lb.kmdh ");
 			query.append("left join f_temp_llb llb on hq.lldh = llb.lldh ");
-			query.append("where hq.jlzt not in ('0','2') ");
+			query.append("where hq.jlzt not in ('0','2') and substr(hq.kmdh,1,4) not in('2203','2315','2141','2301') and hq.kmdh not in ('210102','210103','210104') ");
 			query.append("and hq.xdcked > 0 and hq.zhye > 0 and hq.xdcked >= hq.zhye ");
 			query.append("union all ");
 			query.append("select to_date('"+ monthEndDate+"','yyyymmdd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,'0',hq.zhdh,hq.zhdh,'D051', ");
@@ -83,7 +83,7 @@ public class JBDao {
 			query.append("left join brno_jbcd_link li on hq.dqdh||jgdh = li.brno ");
 			query.append("left join ckcplb lb on hq.kmdh = lb.kmdh ");
 			query.append("left join f_temp_llb llb on hq.lldh = llb.lldh ");
-			query.append("where hq.jlzt not in ('0','2') ");
+			query.append("where hq.jlzt not in ('0','2') and substr(hq.kmdh,1,4) not in('2203','2315','2141','2301') and hq.kmdh not in ('210102','210103','210104') ");
 			query.append("and hq.xdcked > 0 and hq.zhye > 0 and hq.xdcked < hq.zhye ");
 			query.append("union all ");
 			query.append("select to_date('"+ monthEndDate+"','yyyymmdd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,'0',hq.zhdh,hq.zhdh,'D052', ");
@@ -92,7 +92,7 @@ public class JBDao {
 			query.append("left join brno_jbcd_link li on hq.dqdh||jgdh = li.brno ");
 			query.append("left join ckcplb lb on hq.kmdh = lb.kmdh ");
 			query.append("left join f_temp_llb llb on hq.lldh = llb.lldh ");
-			query.append("where hq.jlzt not in ('0','2') ");
+			query.append("where hq.jlzt not in ('0','2') and substr(hq.kmdh,1,4) not in('2203','2315','2141','2301') and hq.kmdh not in ('210102','210103','210104') ");
 			query.append("and hq.xdcked > 0 and hq.zhye > 0 and hq.xdcked < hq.zhye ");
 			query.append("union all ");
 			//对私活期
@@ -105,17 +105,26 @@ public class JBDao {
 			query.append("left join ckcplb lb on hq.kmdh = lb.kmdh ");
 			query.append("left join f_temp_llb llb on hq.lldh = llb.lldh ");
 			query.append("where hq.jlzt not in ('0','2') and hq.kmdh = '211110' and hq.zhye > 0 ");
+			query.append("union all ");
+			//内部帐活期储蓄存款
+			query.append("select to_date('"+ monthEndDate+"','yyyymmdd') as sjrq,case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end as JRJGBM,'1' as KHLX,null as CKZHDM,null as CKXYDM,case when lb.ckcplb is not null then lb.ckcplb else 'D01' end as CPLB, ");
+			query.append("null as CKXYQSRQ,null as CKXYDQRQ,'CNY' as CKBZ,nb.zhye as CKYE,'RF02' as LLSFGD, case when nb.fdll >0 then nb.fdll else llb.ll end as LLSP ");
+			query.append("from nbzzwj nb ");
+			query.append("left join brno_jbcd_link li on nb.dqdh||jgdh = li.brno ");
+			query.append("left join ckcplb lb on nb.kmdh = lb.kmdh ");
+			query.append("left join f_temp_llb llb on nb.lldh = llb.lldh ");
+			query.append("where substr(nb.kmdh,1,4) = '2111' and nb.zhye > 0 ");
 			query.append(") group by sjrq,JRJGBM,KHLX,CKZHDM,CKXYDM,CPLB,CKXYQSRQ,CKXYDQRQ,CKBZ,LLSFGD,LLSP ");
 			query.append("union all ");
 			//其他活期存款
-			query.append("select to_date('"+ monthEndDate+"','yyyymmdd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,'1',hq.zhdh,hq.zhdh,case when lb.ckcplb is not null then lb.ckcplb else 'D01' end, ");
-			query.append("null,null,'CNY',hq.zhye,'RF02', case when hq.fdll >0 then hq.fdll else llb.ll end ");
-			query.append("from dshqzwj hq ");
-			query.append("left join brno_jbcd_link li on hq.dqdh||jgdh = li.brno ");
-			query.append("left join ckcplb lb on hq.kmdh = lb.kmdh ");
-			query.append("left join f_temp_llb llb on hq.lldh = llb.lldh ");
-			query.append("where hq.jlzt not in ('0','2') and hq.kmdh <> '211110' and hq.zhye > 0 ");
-			query.append("union all ");
+//			query.append("select to_date('"+ monthEndDate+"','yyyymmdd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,'1',hq.zhdh,hq.zhdh,case when lb.ckcplb is not null then lb.ckcplb else 'D01' end, ");
+//			query.append("null,null,'CNY',hq.zhye,'RF02', case when hq.fdll >0 then hq.fdll else llb.ll end ");
+//			query.append("from dshqzwj hq ");
+//			query.append("left join brno_jbcd_link li on hq.dqdh||jgdh = li.brno ");
+//			query.append("left join ckcplb lb on hq.kmdh = lb.kmdh ");
+//			query.append("left join f_temp_llb llb on hq.lldh = llb.lldh ");
+//			query.append("where hq.jlzt not in ('0','2') and hq.kmdh <> '211110' and hq.zhye > 0 ");
+//			query.append("union all ");
 			//定期
 			query.append("select to_date('"+ monthEndDate+"','yyyy-mm-dd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,case when dq.ywdh='002' then '0' else '1' end, ");
 			query.append("dq.zhdh,dq.zhdh,case when lb.ckcplb is not null then lb.ckcplb else 'D01' end, ");
@@ -125,7 +134,7 @@ public class JBDao {
 			query.append("left join brno_jbcd_link li on dq.dqdh||dq.jgdh = li.brno ");
 			query.append("left join ckcplb lb on dq.kmdh = lb.kmdh ");
 			query.append("left join f_temp_llb llb on dq.lldh = llb.lldh ");
-			query.append("where dq.jlzt not in ('0','2') and dq.kmdh not in ('211280','210701') and dq.zhye > 0 ");
+			query.append("where dq.jlzt not in ('0','2') and substr(dq.kmdh,1,4) in ('2105','2111','2126') and dq.zhye > 0 ");
 			query.append("union all ");
 			//通知存款
 			query.append("select to_date('"+ monthEndDate+"','yyyy-mm-dd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,case when dq.ywdh='002' then '0' else '1' end, ");
@@ -136,12 +145,22 @@ public class JBDao {
 			query.append("left join brno_jbcd_link li on dq.dqdh||dq.jgdh = li.brno ");
 			query.append("left join ckcplb lb on dq.kmdh = lb.kmdh ");
 			query.append("left join f_temp_llb llb on dq.lldh = llb.lldh ");
-			query.append("where dq.jlzt not in ('0','2') and dq.kmdh in ('211280','210701') and dq.zhye > 0 ) ");
+			query.append("where dq.jlzt not in ('0','2') and  substr(dq.kmdh,1,4) in ('2112','2107') and dq.zhye > 0 ) ");
+//			query.append("union all ");
+			//内部帐其他存款
+//			query.append("select to_date('"+ monthEndDate+"','yyyymmdd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end,'0',nb.zhdh,nb.zhdh,case when lb.ckcplb is not null then lb.ckcplb else 'D01' end, ");		
+//			query.append("null,null,'CNY',nb.zhye,'RF01', case when nb.fdll >0 then nb.fdll when llb.ll >0 then llb.ll else 0 end ");
+//			query.append("from nbzzwj nb ");
+//			query.append("left join brno_jbcd_link li on nb.dqdh||jgdh = li.brno ");
+//			query.append("left join ckcplb lb on nb.kmdh = lb.kmdh ");
+//			query.append("left join f_temp_llb llb on nb.lldh = llb.lldh ");
+//			query.append("where substr(nb.kmdh,1,4) in ('2128','2203') and nb.zhye > 0 ) ");
 			
 			stmt.execute(query.toString());
 			conn.commit();
 		} catch (SQLException e) {
 			conn.rollback();
+			e.printStackTrace();
 			throw new Exception("处理存款余额信息出错:" + e.getMessage(), e);
 		} finally{
 			DBUtil.close(conn, stmt, null);
