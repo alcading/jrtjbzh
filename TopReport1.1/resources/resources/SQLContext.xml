@@ -9,7 +9,7 @@
 			<value>oracle.jdbc.driver.OracleDriver</value>
 		</property>
 		<property name="jdbcUrl">
-			<value>jdbc:oracle:thin:@168.7.56.137:1521:east</value>
+			<value>jdbc:oracle:thin:@localhost:1521:orcl</value>
 			<!-- value>jdbc:oracle:thin:@east:1521:east</value -->
 		</property>
 		<property name="user">

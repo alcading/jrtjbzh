@@ -258,6 +258,7 @@ public class JBDao {
 				String last_upd_date = MonthLastDay; // 数据日期
 				String lntype = "";
 				boolean ext_flag = false; // 是否展期
+				boolean con_flag = false; // 是否缩期
 				String cocontractno = "";
 				contractno = rs.getString("lnco").trim();
 				lncino = rs.getString("idno").trim().trim();
@@ -283,6 +284,11 @@ public class JBDao {
 					if (("1".equals(rs_termchange.getString("status")))
 							&& ("44".equals(rs_termchange.getString("apptype")))) {
 						ext_flag = true;
+						break;
+					}
+					if (("1".equals(rs_termchange.getString("status")))
+							&& ("38".equals(rs_termchange.getString("apptype")))) {
+						con_flag = true;
 						break;
 					}
 				}
@@ -398,12 +404,15 @@ public class JBDao {
 					lnstat = "FS01"; // 正常
 				} else if ("1".equals(lnstat.trim())
 						|| "2".equals(lnstat.trim())) {
-					lnstat = "FS03";
+					lnstat = "FS03";//逾期
 				} else if ("E".equals(lnstat.trim())) {
-					lnstat = "FS04";
+					lnstat = "FS01";
 				}
 				if (ext_flag) {//展期
 					lnstat = "FS02";
+				}
+				if (con_flag) {//缩期
+					lnstat = "FS09";
 				}
 
 				if (!DataFormat.isEmpty(contractno)) {
