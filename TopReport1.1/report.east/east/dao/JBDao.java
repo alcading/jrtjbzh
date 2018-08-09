@@ -26,8 +26,9 @@ public class JBDao {
 	private static final Logger logger = Logger.getLogger(JBDao.class);
 	private String zftxdk = "018,041"; // 政府贴息贷款
 	private String bankReport_bankCode = ""; //总行金标报送金融金钩代码
-	private Map clrClass = null;
-	private Map lntypeMap = null;
+	private Map<String,String> clrClass = null;
+//	private Map lntypeMap = null;
+	private Map<String,String> lntypeMap = null;
 	
 	public JBDao() throws Exception{
 		bankReport_bankCode = BaseDao.getJBBankCode();
@@ -178,7 +179,7 @@ public class JBDao {
 		stmt = conn.createStatement();
 		StringBuffer dbSql = new StringBuffer();
 		dbSql.append("select  clb.lnco,cui.idno,clb.brcd,clb.lncino,clb.lnid,cli.isdate,clb.duedt,clc.tedate,clb.curcd ,clb.lnbal,clb.irchgmod,clb.usdintrate,cli.guatcode,clb.lnstat,cli.clr_class,clc.ext_cnt,cli.lntype,cli.cocontractno  ");
-		dbSql.append("from  loaninfo cli,tla_lncino_base clb,loancino clc,  customer_info cui   ");
+		dbSql.append("from  loaninfo cli,tla_lncino_base clb,loancino clc,  customer_info cui ");
 		dbSql.append("where ");
 		dbSql.append(" clb.lnco = cli.contractno and clb.lncino=clc.cino and clb.custno=cui.custcd and clb.lnstat not in ('V') and clb.clrflg<>'1' and clb.lnbal>0 and clb.lnid not in ('101101','150101') ");
 		//and clb.brcd in ('90801','90802')
@@ -244,7 +245,8 @@ public class JBDao {
 				String invest_element = ""; // 投资经济成分 无需填写
 				String compa_scale = ""; // 企业规模 无需填写
 				String lnid = ""; // 产品类别
-				String industry = "100"; // 贷款实际投向
+//				String industry = "100"; // 贷款实际投向
+				String industry = "9800"; // 贷款实际投向（2018）
 				String isdate = ""; // 贷款发放日期
 				String tedate = ""; // 贷款到期日期
 				String extdate = ""; // 展期到期日期
@@ -266,12 +268,8 @@ public class JBDao {
 				globalCino=cino;
 				cocontractno = rs.getString("cocontractno").trim();
 				lntype = rs.getString("lntype").trim();
-//				Date startdt = rs.getDate("isdate");
-//				isdate = DateUtil.dateToString(startdt); // 贷款发放日期
 				isdate = rs.getString("isdate");
-//				Date endt = rs.getDate("duedt");
-//				tedate = DateUtil.dateToString(endt); // 贷款到期日期
-				tedate = rs.getString("duedt");
+				tedate = rs.getString("duedt");//贷款到期日期
 				clr_class = rs.getString("clr_class");
 				String brcode=rs.getString("brcd");//机构号
 				ps_bankCodeInfo.setString(1,brcode );
@@ -280,15 +278,16 @@ public class JBDao {
 					brno=rs_bankCodeInfo.getString("jbcode");
 				ps_termchange.setString(1, contractno);
 				rs_termchange = ps_termchange.executeQuery();
+				//判断展期缩期  apptype 44-助学贷款展期     ; status 1-审批同意结束
 				while (rs_termchange.next()) {
 					if (("1".equals(rs_termchange.getString("status")))
 							&& ("44".equals(rs_termchange.getString("apptype")))) {
-						ext_flag = true;
+						ext_flag = true;//展期
 						break;
 					}
 					if (("1".equals(rs_termchange.getString("status")))
 							&& ("38".equals(rs_termchange.getString("apptype")))) {
-						con_flag = true;
+						con_flag = true;//缩期
 						break;
 					}
 				}
@@ -424,7 +423,8 @@ public class JBDao {
 					if(lntype.equalsIgnoreCase("018")||lntype.equalsIgnoreCase("035")){
 						lnid="41";                 //与征信接口不统一的两种贷款
 					}
-					lnid = String.valueOf(lntypeMap.get(lnid.trim()));// 501
+//					lnid = String.valueOf(lntypeMap.get(lnid.trim()));// 501
+					lnid = lntypeMap.get(lnid.trim());// 501
 					//add by weigang.lv 为空的默认给消费类型
 					if(DataFormat.isEmpty(lnid)){
 						lnid="F0219";
@@ -507,8 +507,8 @@ public class JBDao {
 		Connection conn = DBUtil.getConnection();
 		logger.info("....................处理个人贷款贷款发生额信息(loan_incurr_message)begin.......................");
 		StringBuffer dbSql = new StringBuffer();
-		dbSql.append("select  clb.lnco,cui.idno,clb.brcd,clb.lncino,clb.lnid,cli.isdate,clb.opdt,clb.duedt,clc.tedate,clb.clsdt,clc.trsf_date,clb.curcd ,clb.lnamt,clb.irchgmod,clb.usdintrate,cli.guatcode,clb.lnstat,cli.clr_class,clc.ext_cnt,cli.lntype,cli.cocontractno,clb.clrflg  ");// ,
-		dbSql.append("from  loaninfo cli,tla_lncino_base clb,loancino clc,  customer_info cui   ");
+		dbSql.append("select  clb.lnco,cui.idno,clb.brcd,clb.lncino,clb.lnid,cli.isdate,clb.opdt,clb.duedt,clc.tedate,clb.clsdt,clc.trsf_date,clb.curcd ,clb.lnamt,clb.irchgmod,clb.usdintrate,cli.guatcode,clb.lnstat,cli.clr_class,clc.ext_cnt,cli.lntype,cli.cocontractno,clb.clrflg,lcm.data_mode  ");// ,
+		dbSql.append("from  loaninfo cli,tla_lncino_base clb,loancino clc,  customer_info cui left join loancino_mode lcm on clc.cino=lcm.cino  ");
 		dbSql.append("where ");
 		dbSql.append("  clb.lnco = cli.contractno and clb.lncino=clc.cino and clb.custno=cui.custcd  and ( clb.lncino in ( select lncino from tla_lnrtnlog ctl  where ctl.rtndt between ? and ?  and  ctl.rtnamt<>0 )  or clb.opdt>= ? ) and clb.lnbal>=0 and clb.lnid not in ('101101','150101')  ");
 		//and clb.acbrcd in ('90801','90802')
@@ -594,7 +594,8 @@ public class JBDao {
 				String invest_element = ""; // 投资经济成分 无需填写
 				String compa_scale = ""; // 企业规模 无需填写
 				String lnid = ""; // 产品类别
-				String industry = "100"; // 贷款实际投向
+//				String industry = "100"; // 贷款实际投向
+				String industry = "9800"; // 贷款实际投向（2018）
 				String isdate = ""; // 贷款发放日期
 				String opdt = ""; // 贷款放款日期
 				String tedate = ""; // 贷款到期日期
@@ -606,6 +607,7 @@ public class JBDao {
 				double intrate = 0.0; // 利率水平 usdintrate
 				String guattype = ""; // 担保方式
 				String lnstat = ""; // 贷款状态 正常、核销、剥离、转让
+				String dataMode="";//贷款状态 （新表loancino_mode） 1.剥离 2.转让 3.重组调整 4.转抵债资产
 				String last_upd_date = MonthLastDay; // 数据日期
 				String lntype = "";
 				boolean ext_flag = false;
@@ -618,14 +620,8 @@ public class JBDao {
 				globalCino=cino;
 				cocontractno = rs.getString("cocontractno");
 				lntype = rs.getString("lntype");
-//				Date getdate = rs.getDate("isdate");
-//				isdate = DateUtil.dateToString(getdate);
 				isdate = rs.getString("isdate");
-//				Date getopdt = rs.getDate("opdt");
-//				opdt = DateUtil.dateToString(getopdt);
 				opdt = rs.getString("opdt");
-//				Date eidt = rs.getDate("duedt");
-//				tedate = DateUtil.dateToString(eidt);
 				tedate =  rs.getString("duedt");
 				curcd = rs.getString("curcd");
 				irchgmod = rs.getString("irchgmod");
@@ -739,7 +735,7 @@ public class JBDao {
 				boolean offFlg = false; // 是否核销
 
 				lnstat = rs.getString("lnstat");
-
+				dataMode=rs.getString("data_mode");
 				if (zftxdk.indexOf(lntype) != -1 // 贷款类型 区分下岗失业贷款
 						&& DataFormat.ConvertDate1(MonthLastDay).before(DataFormat.ConvertDate1(
 								rs.getString("duedt")))) {// 政府贴息贷款，而且没有到期的
@@ -752,11 +748,20 @@ public class JBDao {
 						|| "2".equals(lnstat.trim())) {
 					lnstat = "FS01";
 				} else if ("E".equals(lnstat.trim())) {
-					lnstat = "FS04";
+					lnstat = "FS04";//核销
 					offFlg = true;
+				}else if("1".equals(dataMode.trim())){
+					lnstat="FS05";//剥离
+				}else if("2".equals(dataMode.trim())){
+					lnstat="FS06";//转让
+				}else if("3".equals(dataMode.trim())){
+					lnstat="FS07";//重组
+				}else if("4".equals(dataMode.trim())){
+					lnstat="FS08";//以物抵债
 				}
+				
 				if (ext_flag) {
-					lnstat = "FS02";
+					lnstat = "FS02";//展期
 				}
 
 				if ("1".equals(isClrFlg) || offFlg) { // 结清,核销
@@ -799,7 +804,8 @@ public class JBDao {
 				if(lntype.equalsIgnoreCase("018")||lntype.equalsIgnoreCase("035")){
 					lnid="41";                 //与征信接口不统一的两种贷款
 				}
-				lnid = String.valueOf(lntypeMap.get(lnid.trim()));// 501
+//				lnid = String.valueOf(lntypeMap.get(lnid.trim()));// 501
+				lnid = lntypeMap.get(lnid.trim());// 501
 				//add by weigang.lv 为空的默认给消费类型
 				if(DataFormat.isEmpty(lnid)){
 					lnid="F0219";
@@ -920,18 +926,20 @@ public class JBDao {
 			StringBuffer query = new StringBuffer();
 			query.append("insert into LOAB(select to_date(b.bbrq,'yyyymmdd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end, ");
 			query.append("case when l.cuskind='1' then '0' when l.cuskind='2' then '1' end, ");
-			query.append("substr(b.qydm,0,8)||substr(b.qydm,10,10),upper(b.hy1),case when length(b.zjhm) = 18 then substr(b.zjhm,3,6) else substr(b.zjhm,1,6) end, ");
+//			query.append("substr(b.qydm,0,8)||substr(b.qydm,10,10),upper(b.hy1),case when length(b.zjhm) = 18 then substr(b.zjhm,3,6) else substr(b.zjhm,1,6) end, ");
+			query.append("b.zjhm,upper(b.hy1),case when length(b.zjhm) = 18 then substr(b.zjhm,3,6) else substr(b.zjhm,1,6) end, ");
 			query.append("case when b.org_level2 is not null then b.org_level2 when b.qysyzxz='1' then 'A01' when b.qysyzxz='2' then 'A01' when b.qysyzxz='3' then 'A02' when b.qysyzxz='4' then 'A02' ");		
 			query.append("when b.qysyzxz='5' then 'A02' when b.qysyzxz='6' then 'A02' when b.qysyzxz='7' then 'B01' when b.qysyzxz='8' then 'B01' ");		
 			query.append("when b.qysyzxz='9' then 'B03' when b.qysyzxz='10' then 'B03' when b.qysyzxz='11' then 'B03' when b.qysyzxz='12' then 'B02' ");	  
 			query.append("when b.qysyzxz='13' then 'B02' when b.qysyzxz='14' then 'A01' when b.qysyzxz='15' then 'A01' else  'B01' end, ");
 			query.append("case when b.qygm='0' then 'CS01' when b.qygm='1' then 'CS01' when b.qygm='2' then 'CS02' when b.qygm='3' then 'CS03' when b.qygm='5' then 'CS04' else 'CS04' end, ");
 			query.append("trim(d.duebillno), case when dklx＝'1' then 'F022' when dklx＝'2' then 'F023' when b.dklb='1' then 'F022' when b.dklb＝'37' then 'F99' else 'F05' end, ");
-			query.append("upper(substr(nvl(b.dktx2,b.hy2),1,3)), to_date(b.dksq,'yyyymmdd'), to_date(b.dkzq,'yyyymmdd'), to_date(d.extensiondate,'yyyymmdd'), 'CNY', ''||round(d.dbrestsum,2)||'', case  when b.fdb is null or b.fdb＝0 then 'RF01' else 'RF02' end, ");
+//			query.append("upper(substr(nvl(b.dktx2,b.hy2),1,3)), to_date(b.dksq,'yyyymmdd'), to_date(b.dkzq,'yyyymmdd'), to_date(d.extensiondate,'yyyymmdd'), 'CNY', ''||round(d.dbrestsum,2)||'', case  when b.fdb is null or b.fdb＝0 then 'RF01' else 'RF02' end, ");
+			query.append("substr(t.appid,2,4), to_date(b.dksq,'yyyymmdd'), to_date(b.dkzq,'yyyymmdd'), to_date(d.extensiondate,'yyyymmdd'), 'CNY', ''||round(d.dbrestsum,2)||'', case  when b.fdb is null or b.fdb＝0 then 'RF01' else 'RF02' end, ");
 			query.append("''||round(b.dkll,5)||'', case when s.assettype is not null then s.assettype when b.dbfs='23' then 'A' when b.dbfs='100' then 'D' when b.dbfs='210' then 'C99' else 'Z' end, ");
 			query.append("case when b.dkfl4='11' then 'FQ01' when b.dkfl4='21' then 'FQ02' when b.dkfl4='30' then 'FQ03' when b.dkfl4='40' then 'FQ04' else 'FQ05' end, ");
 			query.append("case when b.zqbz='1' then 'FS02' when b.dkfl3 in('2','3','4') then 'FS03' else 'FS01' end ");
-			query.append("from loan l,loanduebill d left join (select appid,assettype,row_number()over(partition by appid order by assettype) as num from(select distinct s.appid,case when s.assettype in('220101','220102','220103','220104','2206','2205') then 'B01' else 'B99' end as assettype from security s where s.securitykind='22')) s on s.appid=d.appid and s.num=1,b101 b left join BRNO_JBCD_LINK li on b.bmhh = li.bmhh,ind_levelcatalog ind,dkhzwj dk ");
+			query.append("from loan l,loanduebill d left join (select appid,assettype,row_number()over(partition by appid order by assettype) as num from(select distinct s.appid,case when s.assettype in('220101','220102','220103','220104','2206','2205') then 'B01' else 'B99' end as assettype from security s where s.securitykind='22')) s on s.appid=d.appid and s.num=1,b101 b left join BRNO_JBCD_LINK li on b.bmhh = li.bmhh,ind_levelcatalog ind,dkhzwj dk left join loaninvest t on l.appid=t.appid and t.serinum='5' ");
 			query.append("where l.ContractNo=b.dkht and l.appid=d.appid and b.hy1=ind.ind_levelcode and d.dueBillNo=dk.jjh and dk.dkxz not in('8','Q','W') and l.loantype='1'  and l.appopkind != 37 and ");
 			query.append("b.dkye !='0.00'  and b.bbrq = ? ) ");
 			
@@ -958,18 +966,20 @@ public class JBDao {
 			StringBuffer query = new StringBuffer();
 			query.append("insert into LOAF(select to_date(b.bbrq,'yyyymmdd'),case when li.jbcode is not null then li.jbcode else '"+ bankReport_bankCode+"' end, ");
 			query.append("case when l.cuskind='1' then '0' when l.cuskind='2' then '1' end, ");
-			query.append("substr(b.qydm,0,8)||substr(b.qydm,10,10),upper(b.hy1),case when length(b.zjhm) = 18 then substr(b.zjhm,3,6) else substr(b.zjhm,1,6) end, ");
+//			query.append("substr(b.qydm,0,8)||substr(b.qydm,10,10),upper(b.hy1),case when length(b.zjhm) = 18 then substr(b.zjhm,3,6) else substr(b.zjhm,1,6) end, ");
+			query.append("b.zjhm,upper(b.hy1),case when length(b.zjhm) = 18 then substr(b.zjhm,3,6) else substr(b.zjhm,1,6) end, ");
 			query.append("case when b.org_level2 is not null then b.org_level2 when b.qysyzxz='1' then 'A01' when b.qysyzxz='2' then 'A01' when b.qysyzxz='3' then 'A02' when b.qysyzxz='4' then 'A02' ");		
 			query.append("when b.qysyzxz='5' then 'A02' when b.qysyzxz='6' then 'A02' when b.qysyzxz='7' then 'B01' when b.qysyzxz='8' then 'B01' ");		
 			query.append("when b.qysyzxz='9' then 'B03' when b.qysyzxz='10' then 'B03' when b.qysyzxz='11' then 'B03' when b.qysyzxz='12' then 'B02' ");	  
 			query.append("when b.qysyzxz='13' then 'B02' when b.qysyzxz='14' then 'A01' when b.qysyzxz='15' then 'A01' else  'B01' end, ");
 			query.append("case when b.qygm='0' then 'CS01' when b.qygm='1' then 'CS01' when b.qygm='2' then 'CS02' when b.qygm='3' then 'CS03' when b.qygm='5' then 'CS04' else 'CS04' end, ");
-			query.append("trim(d.duebillno), case when dklx＝'1' then 'F022' when dklx＝'2' then 'F023' when b.dklb='1' then 'F022' when b.dklb＝'37' then 'F99' else 'F05' end, upper(substr(nvl(b.dktx2,b.hy2),1,3)), to_date(b.dksq,'yyyymmdd'), to_date(b.dkzq,'yyyymmdd'), ");
+//			query.append("trim(d.duebillno), case when dklx＝'1' then 'F022' when dklx＝'2' then 'F023' when b.dklb='1' then 'F022' when b.dklb＝'37' then 'F99' else 'F05' end, upper(substr(nvl(b.dktx2,b.hy2),1,3)), to_date(b.dksq,'yyyymmdd'), to_date(b.dkzq,'yyyymmdd'), ");
+			query.append("trim(d.duebillno), case when dklx＝'1' then 'F022' when dklx＝'2' then 'F023' when b.dklb='1' then 'F022' when b.dklb＝'37' then 'F99' else 'F05' end, substr(t.appid,2,4), to_date(b.dksq,'yyyymmdd'), to_date(b.dkzq,'yyyymmdd'), ");
 			query.append("case when acc.opbriefcode='022' then to_date(acc.lastupdatedate,'yyyymmdd') when acc.opbriefcode='322' then to_date(acc.lastupdatedate,'yyyymmdd') else to_date(d.realmaturedate,'yyyymmdd') end, ");
 			query.append("'CNY', ''||round(acc.occursum,2)||'', case when dk.jxbz='1' then  'RF01' else 'RF02' end, ''||round(b.dkll,5)||'', ");
 			query.append("case when s.assettype is not null then s.assettype when b.dbfs='23' then 'A' when b.dbfs='100' then 'D' when b.dbfs='210' then 'C99' else 'Z' end, 'FS01', ");
 			query.append("case when acc.creditdebitflag='1' then '1' else '0' end ");
-			query.append("from loan l,loanduebill d left join (select appid,assettype,row_number()over(partition by appid order by assettype) as num from(select distinct s.appid,case when s.assettype in('220101','220102','220103','220104','2206','2205') then 'B01' else 'B99' end as assettype from security s where s.securitykind='22')) s on s.appid=d.appid and s.num=1,b101 b left join BRNO_JBCD_LINK li on b.bmhh = li.bmhh,accountentry acc,dkhzwj dk ");
+			query.append("from loan l,loanduebill d left join (select appid,assettype,row_number()over(partition by appid order by assettype) as num from(select distinct s.appid,case when s.assettype in('220101','220102','220103','220104','2206','2205') then 'B01' else 'B99' end as assettype from security s where s.securitykind='22')) s on s.appid=d.appid and s.num=1,b101 b left join BRNO_JBCD_LINK li on b.bmhh = li.bmhh,accountentry acc,dkhzwj dk left join loaninvest t on l.appid=t.appid and t.serinum='5' ");
 			query.append("where l.ContractNo=b.dkht and l.appid=d.appid and l.appid=acc.appid and d.dueBillNo=dk.jjh and dk.dkxz not in('8','Q','W') and l.loantype='1'  and l.appopkind != 37 and ");
 			query.append("acc.occurdate between ? and ? and b.bbrq = ? and acc.duebillno = d.dueBillNo and acc.opflag='1' )");
 			
@@ -1038,7 +1048,7 @@ public class JBDao {
 	 * @param 数据库连接,内部数据字典值,数据字典映射ID
 	 * @return 个人余额类型
 	 */
-	private Map getDataDicMap(int data_dic_map_id){
+	private Map<String,String> getDataDicMap(int data_dic_map_id){
 		String outcode = "";
 		String incode = "";
 		Map<String, String> map = new HashMap<String, String>();
